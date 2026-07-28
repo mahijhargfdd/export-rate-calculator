@@ -261,7 +261,7 @@
   function parseCSV(text) {
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     const rates = [];
-    const rules = { ESS: 0, ES: 0, FS: 0, GDA_PER_KG: 170, GDA_MIN: 30, PROFIT: 15, GST: 18, ETA: '' };
+    const rules = { ESS: 0, ES: 0, FS: 0, GDA_PER_KG: 170, GDA_MIN: 30, PROFIT: 15, GST: 18, DEFAULT_ETA: '' };
 
     lines.forEach(line => {
       const matches = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || line.split(',');
@@ -269,20 +269,16 @@
       
       const wt = parseFloat(parts[0]);
       const rate = parseFloat(parts[1]);
-      const type = parts[4];
-      const col2Value = parts[2];
+      const etaVal = parts[3];   // Column D is Index 3 (ETA)
+      const typeVal = parts[4];  // Column E is Index 4 (Rate_Type)
 
-      // Parse rates
       if (!isNaN(wt) && !isNaN(rate)) {
-        rates.push({ wt, rate, type: type || 'FLAT' });
+        rates.push({ wt, rate, eta: etaVal || '', type: typeVal || 'FLAT' });
+        if (etaVal && etaVal.trim() !== '' && !rules.DEFAULT_ETA) {
+          rules.DEFAULT_ETA = etaVal.trim();
+        }
       }
 
-      // Read ETA from sheet rows directly (looks for "day" text in column C/3rd column)
-      if (col2Value && col2Value.toLowerCase().includes('day')) {
-        rules.ETA = col2Value;
-      }
-
-      // Check key-value rules
       if (parts[0] === 'ESS') rules.ESS = parseFloat(parts[3]) || 0;
       if (parts[0] === 'ES') rules.ES = parseFloat(parts[3]) || 0;
       if (parts[0] === 'FS') rules.FS = parseFloat(parts[3]) || 0;
@@ -290,7 +286,6 @@
       if (parts[0] === 'GDA_MIN') rules.GDA_MIN = parseFloat(parts[3]) || 30;
       if (parts[0] === 'GST') rules.GST = parseFloat(parts[3]) || 18;
       if (parts[0] === 'PROFIT') rules.PROFIT = parseFloat(parts[3]) || 15;
-      if (parts[0] === 'ETA') rules.ETA = parts[3] || parts[2] || parts[1] || '';
     });
 
     return { rates, rules };
@@ -337,17 +332,17 @@
       const { rates, rules } = acc.data;
       let baseFreight = 0;
       let totalCarrierCost = 0;
-
-      // Pure Direct Live ETA from Google Sheet (Fallback to 'Standard' if cell is totally empty)
-      const liveEta = (rules.ETA && rules.ETA.trim() !== '') ? rules.ETA : 'Standard Express';
+      let matchedEta = rules.DEFAULT_ETA || 'Standard Express';
 
       if (acc.type === 'ARAMEX') {
         if (chargeableWt <= 20) {
           let matched = rates.find(r => r.wt >= chargeableWt && r.type === 'FLAT');
           baseFreight = matched ? matched.rate : (chargeableWt * 160);
+          if (matched && matched.eta) matchedEta = matched.eta;
         } else {
           let perKgObj = rates.find(r => r.wt > 20);
           baseFreight = chargeableWt * (perKgObj ? perKgObj.rate : 133);
+          if (perKgObj && perKgObj.eta) matchedEta = perKgObj.eta;
         }
 
         const essCost = chargeableWt * rules.ESS;
@@ -359,9 +354,12 @@
         if (chargeableWt <= 25) {
           let matched = rates.find(r => r.wt >= chargeableWt && r.type === 'FLAT');
           baseFreight = matched ? matched.rate : 4953;
+          if (matched && matched.eta) matchedEta = matched.eta;
         } else {
-          let perKgRate = rates.find(r => r.type === 'PER_KG') ? rates.find(r => r.type === 'PER_KG').rate : 189.7;
+          let perKgRateObj = rates.find(r => r.type === 'PER_KG');
+          let perKgRate = perKgRateObj ? perKgRateObj.rate : 189.7;
           baseFreight = 4005 + ((chargeableWt - 20) * perKgRate);
+          if (perKgRateObj && perKgRateObj.eta) matchedEta = perKgRateObj.eta;
         }
 
         const gdaCost = Math.max(rules.GDA_MIN, chargeableWt * rules.GDA_PER_KG);
@@ -371,12 +369,14 @@
         if (chargeableWt <= 30) {
           let matched = rates.find(r => r.wt >= chargeableWt && r.type === 'FLAT');
           baseFreight = matched ? matched.rate : (chargeableWt * 300);
+          if (matched && matched.eta) matchedEta = matched.eta;
         } else {
           let matchedPerKg = rates.find(r => r.wt <= chargeableWt && r.type === 'PER_KG');
           if (!matchedPerKg) matchedPerKg = rates.find(r => r.type === 'PER_KG');
           
           let perKgRate = matchedPerKg ? matchedPerKg.rate : 292;
           baseFreight = chargeableWt * perKgRate;
+          if (matchedPerKg && matchedPerKg.eta) matchedEta = matchedPerKg.eta;
         }
 
         const fsCost = (baseFreight * rules.FS) / 100;
@@ -389,7 +389,7 @@
 
       calculatedResults.push({
         name: acc.name,
-        eta: liveEta,
+        eta: matchedEta,
         sellingSubtotal,
         gstAmount,
         grandTotal
