@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CourierBird - Live Shipping Calculator</title>
+  <title>CourierBird - Enterprise Shipping Rate Calculator</title>
   <!-- Google Fonts & FontAwesome Icons -->
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -167,6 +167,7 @@
       <label>Destination Country</label>
       <select id="country">
         <option value="UAE">UAE (United Arab Emirates)</option>
+        <option value="Saudi Arabia">Saudi Arabia (KSA)</option>
       </select>
     </div>
   </div>
@@ -236,13 +237,28 @@
 </div>
 
 <script>
-  const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSAmLg-6alcw5asDwpcHZ7nf71y-2ITlVRzTEKHc4McYr4KDtZ06yJmRG4Wxn5uYHIpr5Y--BOM2sqk/pub?single=true&output=csv';
+  // UAE Sheet Base URL
+  const UAE_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSAmLg-6alcw5asDwpcHZ7nf71y-2ITlVRzTEKHc4McYr4KDtZ06yJmRG4Wxn5uYHIpr5Y--BOM2sqk/pub?single=true&output=csv';
+  
+  // SAUDI ARABIA Sheet Base URL
+  const KSA_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS-IbslFjcuzVkqrkvOEZlUVre8gWO9ypKYd3mYcJGNH1g/pub?single=true&output=csv';
 
-  const URL_ACC1 = BASE_URL + '&gid=0';
-  const URL_ACC2 = BASE_URL + '&gid=236963727';
-  const URL_SHIPGLOBAL = BASE_URL + '&gid=145078686';
-  const URL_DHL1 = BASE_URL + '&gid=2096318850';
-  const URL_DHL2 = BASE_URL + '&gid=1025044058';
+  // UAE GIDs
+  const UAE_URLS = [
+    { name: 'UAE_Aramex_Account1', type: 'ARAMEX', url: UAE_BASE_URL + '&gid=0' },
+    { name: 'UAE_Aramex_Account2', type: 'ARAMEX', url: UAE_BASE_URL + '&gid=236963727' },
+    { name: 'UAE_ShipGlobal', type: 'SHIPGLOBAL', url: UAE_BASE_URL + '&gid=145078686' },
+    { name: 'UAE_DHL', type: 'DHL', url: UAE_BASE_URL + '&gid=2096318850' },
+    { name: 'UAE_DHL_Account2', type: 'DHL', url: UAE_BASE_URL + '&gid=1025044058' }
+  ];
+
+  // SAUDI ARABIA GIDs
+  const KSA_URLS = [
+    { name: 'KSA_Carrier_Partner1', type: 'ARAMEX', url: KSA_BASE_URL + '&gid=0' },
+    { name: 'KSA_Carrier_Partner2', type: 'SHIPGLOBAL', url: KSA_BASE_URL + '&gid=699683441' },
+    { name: 'KSA_DHL_Express', type: 'DHL', url: KSA_BASE_URL + '&gid=1417448381' },
+    { name: 'KSA_Carrier_Partner4', type: 'DHL', url: KSA_BASE_URL + '&gid=1794103773' }
+  ];
 
   async function fetchSheetData(url) {
     try {
@@ -310,16 +326,6 @@
     document.getElementById('loader').style.display = 'block';
     document.getElementById('resultBox').style.display = 'none';
 
-    const [acc1Data, acc2Data, sgData, dhl1Data, dhl2Data] = await Promise.all([
-      fetchSheetData(URL_ACC1),
-      fetchSheetData(URL_ACC2),
-      fetchSheetData(URL_SHIPGLOBAL),
-      fetchSheetData(URL_DHL1),
-      fetchSheetData(URL_DHL2)
-    ]);
-
-    document.getElementById('loader').style.display = 'none';
-
     const fromCountry = document.getElementById('fromCountry').value;
     const toCountry = document.getElementById('country').value;
     const cartons = parseInt(document.getElementById('cartons').value) || 1;
@@ -331,23 +337,25 @@
     const volWt = ((l * w * h) / 5000) * cartons;
     const chargeableWt = Math.max(grossWt, volWt);
 
-    const accountsList = [
-      { name: 'UAE_Aramex_Account1', type: 'ARAMEX', data: acc1Data },
-      { name: 'UAE_Aramex_Account2', type: 'ARAMEX', data: acc2Data },
-      { name: 'UAE_ShipGlobal', type: 'SHIPGLOBAL', data: sgData },
-      { name: 'UAE_DHL', type: 'DHL', data: dhl1Data },
-      { name: 'UAE_DHL_Account2', type: 'DHL', data: dhl2Data }
-    ];
+    // Dynamic Country Target Selection
+    const selectedCarriers = (toCountry === 'Saudi Arabia') ? KSA_URLS : UAE_URLS;
+
+    const fetchedDataList = await Promise.all(
+      selectedCarriers.map(c => fetchSheetData(c.url))
+    );
+
+    document.getElementById('loader').style.display = 'none';
 
     let calculatedResults = [];
 
-    accountsList.forEach(acc => {
-      if (!acc.data || acc.data.rates.length === 0) return;
+    selectedCarriers.forEach((acc, index) => {
+      const data = fetchedDataList[index];
+      if (!data || data.rates.length === 0) return;
 
-      const { rates, rules } = acc.data;
+      const { rates, rules } = data;
       let baseFreight = 0;
       let totalCarrierCost = 0;
-      let matchedEta = rules.DEFAULT_ETA || '3-5 Days';
+      let matchedEta = rules.DEFAULT_ETA || '4-6 Days';
 
       if (acc.type === 'ARAMEX') {
         if (chargeableWt <= 20) {
