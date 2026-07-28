@@ -227,7 +227,7 @@
         <i class="fa-brands fa-whatsapp" style="font-size: 18px;"></i> Chat on WhatsApp (+91 77238 37272)
       </a>
       <a href="mailto:courierbirdshipping@gmail.com?subject=International%20Shipping%20Inquiry" class="btn-contact btn-email">
-        <i class="fa-regular fa-envelope" style="font-size: 16px;"></i> Email Support
+        <i class="fa-regular fa-envelope" style="font-size: 14px;"></i> Email Support
       </a>
     </div>
   </div>
@@ -235,10 +235,11 @@
 </div>
 
 <script>
-  // Google Sheets Export Base URLs
+  // UAE Sheet Base URL
   const UAE_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSAmLg-6alcw5asDwpcHZ7nf71y-2ITlVRzTEKHc4McYr4KDtZ06yJmRG4Wxn5uYHIpr5Y--BOM2sqk/pub?single=true&output=csv';
   
-  const KSA_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS-IbslFjcuzVkqrkvOEZlUVre8gWO9ypKYd3mYcJGNH1g/pub?single=true&output=csv';
+  // EXACT NEW SAUDI ARABIA Published Sheet Base URL
+  const KSA_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQFet3GpJqFMQqRPEbovGL5Bkef1p2MMnl0sUVfPAWcki6ZqpWyjZw4N3gS6Wu_h0u82mnvtmqz6Fk5/pub?single=true&output=csv';
 
   // UAE GIDs
   const UAE_URLS = [
@@ -249,10 +250,10 @@
     { name: 'UAE_DHL_Account2', type: 'DHL', url: UAE_BASE_URL + '&gid=1025044058' }
   ];
 
-  // SAUDI ARABIA GIDs
+  // SAUDI ARABIA Exact Tab GIDs
   const KSA_URLS = [
     { name: 'KSA_Aramex_Account1', type: 'ARAMEX', url: KSA_BASE_URL + '&gid=0' },
-    { name: 'KSA_ShipGlobal', type: 'SHIPGLOBAL', url: KSA_BASE_URL + '&gid=699683441' },
+    { name: 'KSA_Aramex_Account2', type: 'ARAMEX', url: KSA_BASE_URL + '&gid=699683441' },
     { name: 'KSA_DHL_Express1', type: 'DHL', url: KSA_BASE_URL + '&gid=1417448381' },
     { name: 'KSA_DHL_Express2', type: 'DHL', url: KSA_BASE_URL + '&gid=1794103773' }
   ];
@@ -260,6 +261,7 @@
   async function fetchSheetData(url) {
     try {
       const response = await fetch(url);
+      if (!response.ok) return null;
       const csvText = await response.text();
       return parseCSV(csvText);
     } catch (e) {
@@ -298,7 +300,6 @@
       const wt = parseFloat(parts[0]);
       const rate = parseFloat(parts[1]);
       
-      // Flexible ETA column detection
       let etaVal = '';
       if (parts[3] && parts[3].toLowerCase().includes('day')) {
         etaVal = parts[3];
@@ -348,7 +349,7 @@
     const volWt = ((l * w * h) / 5000) * cartons;
     const chargeableWt = Math.max(grossWt, volWt);
 
-    // Dynamic Country Selection
+    // Target Selection
     const selectedCarriers = (toCountry === 'Saudi Arabia') ? KSA_URLS : UAE_URLS;
 
     const fetchedDataList = await Promise.all(
