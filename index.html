@@ -142,13 +142,11 @@
 
 <div class="calc-card">
   
-  <!-- ORIGINAL COURIERBIRD LOGO HEADER -->
   <div class="brand-header">
     <img src="https://i.ibb.co/ZzSD1DDc/image.png" alt="CourierBird Logo" class="brand-logo-img">
     <div class="brand-subtitle">Multi-Carrier Live Shipping Rate Calculator</div>
   </div>
 
-  <!-- Trust Bar with Icons -->
   <div class="trust-bar">
     <div class="trust-item"><i class="fa-solid fa-truck-ramp-box"></i> Doorstep Pickup</div>
     <div class="trust-item"><i class="fa-solid fa-rotate"></i> Live Sync Rates</div>
@@ -166,6 +164,7 @@
     <div class="form-group">
       <label>Destination Country</label>
       <select id="country">
+        <option value="" disabled selected>-- Select Destination Country --</option>
         <option value="UAE">UAE (United Arab Emirates)</option>
         <option value="Saudi Arabia">Saudi Arabia (KSA)</option>
       </select>
@@ -211,7 +210,6 @@
     </table>
   </div>
 
-  <!-- Carrier Logos -->
   <div class="partner-section">
     <div class="partner-title">Official Logistics Network Partners</div>
     <div class="partner-badges">
@@ -237,10 +235,9 @@
 </div>
 
 <script>
-  // UAE Sheet Base URL
+  // Google Sheets Export Base URLs
   const UAE_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSAmLg-6alcw5asDwpcHZ7nf71y-2ITlVRzTEKHc4McYr4KDtZ06yJmRG4Wxn5uYHIpr5Y--BOM2sqk/pub?single=true&output=csv';
   
-  // SAUDI ARABIA Sheet Base URL
   const KSA_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS-IbslFjcuzVkqrkvOEZlUVre8gWO9ypKYd3mYcJGNH1g/pub?single=true&output=csv';
 
   // UAE GIDs
@@ -254,10 +251,10 @@
 
   // SAUDI ARABIA GIDs
   const KSA_URLS = [
-    { name: 'KSA_Carrier_Partner1', type: 'ARAMEX', url: KSA_BASE_URL + '&gid=0' },
-    { name: 'KSA_Carrier_Partner2', type: 'SHIPGLOBAL', url: KSA_BASE_URL + '&gid=699683441' },
-    { name: 'KSA_DHL_Express', type: 'DHL', url: KSA_BASE_URL + '&gid=1417448381' },
-    { name: 'KSA_Carrier_Partner4', type: 'DHL', url: KSA_BASE_URL + '&gid=1794103773' }
+    { name: 'KSA_Aramex_Account1', type: 'ARAMEX', url: KSA_BASE_URL + '&gid=0' },
+    { name: 'KSA_ShipGlobal', type: 'SHIPGLOBAL', url: KSA_BASE_URL + '&gid=699683441' },
+    { name: 'KSA_DHL_Express1', type: 'DHL', url: KSA_BASE_URL + '&gid=1417448381' },
+    { name: 'KSA_DHL_Express2', type: 'DHL', url: KSA_BASE_URL + '&gid=1794103773' }
   ];
 
   async function fetchSheetData(url) {
@@ -293,18 +290,26 @@
   function parseCSV(text) {
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     const rates = [];
-    const rules = { ESS: 0, ES: 0, FS: 0, GDA_PER_KG: 170, GDA_MIN: 30, PROFIT: 15, GST: 18, DEFAULT_ETA: '' };
+    const rules = { ESS: 0, ES: 0, FS: 25, GDA_PER_KG: 170, GDA_MIN: 30, PROFIT: 15, GST: 18, DEFAULT_ETA: '' };
 
     lines.forEach(line => {
       const parts = parseCSVLine(line);
       
       const wt = parseFloat(parts[0]);
       const rate = parseFloat(parts[1]);
-      const etaVal = parts[3];   
-      const typeVal = parts[4];  
+      
+      // Flexible ETA column detection
+      let etaVal = '';
+      if (parts[3] && parts[3].toLowerCase().includes('day')) {
+        etaVal = parts[3];
+      } else if (parts[2] && parts[2].toLowerCase().includes('day')) {
+        etaVal = parts[2];
+      }
+
+      const typeVal = parts[4] || parts[3] || 'FLAT';
 
       if (!isNaN(wt) && !isNaN(rate)) {
-        rates.push({ wt, rate, eta: etaVal || '', type: typeVal || 'FLAT' });
+        rates.push({ wt, rate, eta: etaVal, type: typeVal });
         if (etaVal && etaVal.trim() !== '' && !rules.DEFAULT_ETA) {
           rules.DEFAULT_ETA = etaVal.trim();
         }
@@ -312,7 +317,7 @@
 
       if (parts[0] === 'ESS') rules.ESS = parseFloat(parts[3]) || 0;
       if (parts[0] === 'ES') rules.ES = parseFloat(parts[3]) || 0;
-      if (parts[0] === 'FS') rules.FS = parseFloat(parts[3]) || 0;
+      if (parts[0] === 'FS') rules.FS = parseFloat(parts[3]) || rules.FS;
       if (parts[0] === 'GDA_PER_KG') rules.GDA_PER_KG = parseFloat(parts[3]) || 170;
       if (parts[0] === 'GDA_MIN') rules.GDA_MIN = parseFloat(parts[3]) || 30;
       if (parts[0] === 'GST') rules.GST = parseFloat(parts[3]) || 18;
@@ -323,11 +328,17 @@
   }
 
   async function calculateLiveRates() {
+    const toCountry = document.getElementById('country').value;
+
+    if (!toCountry) {
+      alert('Please select a Destination Country first!');
+      return;
+    }
+
     document.getElementById('loader').style.display = 'block';
     document.getElementById('resultBox').style.display = 'none';
 
     const fromCountry = document.getElementById('fromCountry').value;
-    const toCountry = document.getElementById('country').value;
     const cartons = parseInt(document.getElementById('cartons').value) || 1;
     const grossWt = parseFloat(document.getElementById('grossWeight').value) || 0;
     const l = parseFloat(document.getElementById('length').value) || 0;
@@ -337,7 +348,7 @@
     const volWt = ((l * w * h) / 5000) * cartons;
     const chargeableWt = Math.max(grossWt, volWt);
 
-    // Dynamic Country Target Selection
+    // Dynamic Country Selection
     const selectedCarriers = (toCountry === 'Saudi Arabia') ? KSA_URLS : UAE_URLS;
 
     const fetchedDataList = await Promise.all(
@@ -350,7 +361,7 @@
 
     selectedCarriers.forEach((acc, index) => {
       const data = fetchedDataList[index];
-      if (!data || data.rates.length === 0) return;
+      if (!data || !data.rates || data.rates.length === 0) return;
 
       const { rates, rules } = data;
       let baseFreight = 0;
@@ -359,7 +370,7 @@
 
       if (acc.type === 'ARAMEX') {
         if (chargeableWt <= 20) {
-          let matched = rates.find(r => r.wt >= chargeableWt && r.type === 'FLAT');
+          let matched = rates.find(r => r.wt >= chargeableWt);
           baseFreight = matched ? matched.rate : (chargeableWt * 160);
           if (matched && matched.eta) matchedEta = matched.eta;
         } else {
@@ -375,11 +386,11 @@
 
       } else if (acc.type === 'SHIPGLOBAL') {
         if (chargeableWt <= 25) {
-          let matched = rates.find(r => r.wt >= chargeableWt && r.type === 'FLAT');
+          let matched = rates.find(r => r.wt >= chargeableWt);
           baseFreight = matched ? matched.rate : 4953;
           if (matched && matched.eta) matchedEta = matched.eta;
         } else {
-          let perKgRateObj = rates.find(r => r.type === 'PER_KG');
+          let perKgRateObj = rates.find(r => r.type === 'PER_KG') || rates[rates.length - 1];
           let perKgRate = perKgRateObj ? perKgRateObj.rate : 189.7;
           baseFreight = 4005 + ((chargeableWt - 20) * perKgRate);
           if (perKgRateObj && perKgRateObj.eta) matchedEta = perKgRateObj.eta;
@@ -390,12 +401,12 @@
 
       } else if (acc.type === 'DHL') {
         if (chargeableWt <= 30) {
-          let matched = rates.find(r => r.wt >= chargeableWt && r.type === 'FLAT');
+          let matched = rates.find(r => r.wt >= chargeableWt);
           baseFreight = matched ? matched.rate : (chargeableWt * 300);
           if (matched && matched.eta) matchedEta = matched.eta;
         } else {
           let matchedPerKg = rates.find(r => r.wt <= chargeableWt && r.type === 'PER_KG');
-          if (!matchedPerKg) matchedPerKg = rates.find(r => r.type === 'PER_KG');
+          if (!matchedPerKg) matchedPerKg = rates.find(r => r.type === 'PER_KG') || rates[rates.length - 1];
           
           let perKgRate = matchedPerKg ? matchedPerKg.rate : 292;
           baseFreight = chargeableWt * perKgRate;
@@ -418,6 +429,11 @@
         grandTotal
       });
     });
+
+    if (calculatedResults.length === 0) {
+      alert('Could not load rates for the selected country. Please ensure the Google Sheet is published to web as CSV.');
+      return;
+    }
 
     calculatedResults.sort((a, b) => a.grandTotal - b.grandTotal);
 
