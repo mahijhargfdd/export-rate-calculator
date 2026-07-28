@@ -7,7 +7,7 @@
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
     body { background: #f0f4f8; padding: 20px; margin: 0; }
-    .calc-card { max-width: 850px; margin: 20px auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+    .calc-card { max-width: 900px; margin: 20px auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
     h2 { color: #0f2942; margin-top: 0; text-align: center; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     @media(max-width: 500px){ .grid { grid-template-columns: 1fr; } }
@@ -59,7 +59,7 @@
   </div>
 
   <button onclick="calculateLiveRates()">Compare All Live Rates</button>
-  <div class="loader" id="loader">Fetching latest live rates from Google Sheets... ⏳</div>
+  <div class="loader" id="loader">Fetching live rates from Google Sheets... ⏳</div>
 
   <div class="result-box" id="resultBox" style="display:none;">
     <div class="vol-info" id="weightSummary"></div>
@@ -84,10 +84,12 @@
 <script>
   const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSAmLg-6alcw5asDwpcHZ7nf71y-2ITlVRzTEKHc4McYr4KDtZ06yJmRG4Wxn5uYHIpr5Y--BOM2sqk/pub?single=true&output=csv';
 
-  // Connected Sheet Tabs
+  // Connected Sheet Tabs (All 5 Accounts)
   const URL_ACC1 = BASE_URL + '&gid=0';
   const URL_ACC2 = BASE_URL + '&gid=236963727';
-  const URL_SHIPGLOBAL = BASE_URL + '&gid=145078686'; // 👈 UAE_ShipGlobal GID Connected!
+  const URL_SHIPGLOBAL = BASE_URL + '&gid=145078686';
+  const URL_DHL1 = BASE_URL + '&gid=2096318850';
+  const URL_DHL2 = BASE_URL + '&gid=1025044058';
 
   async function fetchSheetData(url) {
     try {
@@ -132,10 +134,12 @@
     document.getElementById('loader').style.display = 'block';
     document.getElementById('resultBox').style.display = 'none';
 
-    const [acc1Data, acc2Data, sgData] = await Promise.all([
+    const [acc1Data, acc2Data, sgData, dhl1Data, dhl2Data] = await Promise.all([
       fetchSheetData(URL_ACC1),
       fetchSheetData(URL_ACC2),
-      fetchSheetData(URL_SHIPGLOBAL)
+      fetchSheetData(URL_SHIPGLOBAL),
+      fetchSheetData(URL_DHL1),
+      fetchSheetData(URL_DHL2)
     ]);
 
     document.getElementById('loader').style.display = 'none';
@@ -152,7 +156,9 @@
     const accountsList = [
       { name: 'Aramex (Account 1)', eta: '5-7 Days', type: 'ARAMEX', data: acc1Data },
       { name: 'Aramex (Account 2)', eta: '5-7 Days', type: 'ARAMEX', data: acc2Data },
-      { name: 'ShipGlobal Express', eta: '6-8 Days', type: 'SHIPGLOBAL', data: sgData }
+      { name: 'ShipGlobal Express', eta: '6-8 Days', type: 'SHIPGLOBAL', data: sgData },
+      { name: 'DHL Express (Account 1)', eta: '2-4 Days', type: 'DHL', data: dhl1Data },
+      { name: 'DHL Express (Account 2)', eta: '2-4 Days', type: 'DHL', data: dhl2Data }
     ];
 
     let rowsHTML = '';
@@ -187,9 +193,24 @@
           baseFreight = 4005 + ((chargeableWt - 20) * perKgRate);
         }
 
-        // GDA Logic: Max of ₹30 OR (Weight * ₹170)
         const gdaCost = Math.max(rules.GDA_MIN, chargeableWt * rules.GDA_PER_KG);
         totalCarrierCost = baseFreight + gdaCost;
+
+      } else if (acc.type === 'DHL') {
+        if (chargeableWt <= 30) {
+          let matched = rates.find(r => r.wt >= chargeableWt && r.type === 'FLAT');
+          baseFreight = matched ? matched.rate : (chargeableWt * 300);
+        } else {
+          // Multiplier Rates (30.1 - 70 KG, 70.1 - 300 KG, 300.1+ KG)
+          let matchedPerKg = rates.find(r => r.wt <= chargeableWt && r.type === 'PER_KG');
+          if (!matchedPerKg) matchedPerKg = rates.find(r => r.type === 'PER_KG');
+          
+          let perKgRate = matchedPerKg ? matchedPerKg.rate : 292;
+          baseFreight = chargeableWt * perKgRate;
+        }
+
+        const fsCost = (baseFreight * rules.FS) / 100;
+        totalCarrierCost = baseFreight + fsCost;
       }
 
       const sellingSubtotal = totalCarrierCost * (1 + (rules.PROFIT / 100));
