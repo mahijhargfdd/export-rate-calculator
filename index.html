@@ -33,6 +33,15 @@
     .price-text { font-size: 16px; font-weight: bold; color: #ff6600; }
     .badge { background: #38a169; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; margin-left: 5px; }
     .loader { display: none; text-align: center; color: #0b2368; font-weight: bold; margin-top: 10px; }
+
+    /* Contact Section Styling */
+    .contact-section { margin-top: 25px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center; }
+    .contact-title { font-size: 15px; font-weight: 700; color: #0b2368; margin-bottom: 12px; }
+    .btn-container { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+    .btn-contact { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; padding: 12px 20px; border-radius: 6px; font-weight: bold; font-size: 14px; transition: opacity 0.2s; }
+    .btn-whatsapp { background: #25D366; color: white; }
+    .btn-email { background: #0b2368; color: white; }
+    .btn-contact:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
@@ -100,6 +109,20 @@
       </tbody>
     </table>
   </div>
+
+  <!-- Contact Us Section -->
+  <div class="contact-section">
+    <div class="contact-title">Have Questions or Want to Book a Shipment?</div>
+    <div class="btn-container">
+      <a href="https://wa.me/917723837272?text=Hi%20CourierBird,%20I%20want%20to%20book%20a%20shipment%20/%20have%20a%20query." target="_blank" class="btn-contact btn-whatsapp">
+        💬 Chat on WhatsApp (+91 77238 37272)
+      </a>
+      <a href="mailto:courierbirdshipping@gmail.com?subject=International%20Shipping%20Inquiry" class="btn-contact btn-email">
+        ✉️ Email Support
+      </a>
+    </div>
+  </div>
+
 </div>
 
 <script>
