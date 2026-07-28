@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>All Carrier Rates Comparison Calculator</title>
+  <title>Global Live Rate Calculator</title>
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
     body { background: #f0f4f8; padding: 20px; margin: 0; }
@@ -20,19 +20,18 @@
     .result-box { margin-top: 25px; padding: 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
     .vol-info { font-size: 13px; color: #2b6cb0; margin-bottom: 15px; font-weight: 600; background: #ebf8ff; padding: 10px; border-radius: 6px; }
     
-    /* Comparison Table Styles */
     .rate-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     .rate-table th, .rate-table td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
     .rate-table th { background: #edf2f7; color: #2d3748; }
-    .badge { background: #38a169; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; margin-left: 5px; }
-    .fast-badge { background: #e53e3e; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; margin-left: 5px; }
     .price-text { font-size: 16px; font-weight: bold; color: #0066cc; }
+    .badge { background: #38a169; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; margin-left: 5px; }
+    .loader { display: none; text-align: center; color: #0066cc; font-weight: bold; margin-top: 10px; }
   </style>
 </head>
 <body>
 
 <div class="calc-card">
-  <h2>🚢 Global Courier Comparison Calculator</h2>
+  <h2>🚢 International Shipping Rate Calculator</h2>
 
   <div class="form-group">
     <label>Destination Country:</label>
@@ -59,7 +58,8 @@
     <input type="number" id="height" placeholder="Height" value="20">
   </div>
 
-  <button onclick="calculateAllRates()">Compare All Shipping Rates</button>
+  <button onclick="calculateLiveRates()">Fetch Rates Live From Google Sheet</button>
+  <div class="loader" id="loader">Fetching latest rates from Google Sheets... ⏳</div>
 
   <div class="result-box" id="resultBox" style="display:none;">
     <div class="vol-info" id="weightSummary"></div>
@@ -67,82 +67,73 @@
     <table class="rate-table">
       <thead>
         <tr>
-          <th>Carrier & Option</th>
+          <th>Carrier / Account</th>
           <th>ETA</th>
           <th>Total Cost (Inc. GST)</th>
         </tr>
       </thead>
       <tbody id="comparisonRows">
-        <!-- Dynamic Rows Will Load Here -->
+        <!-- Live Google Sheet Data -->
       </tbody>
     </table>
   </div>
 </div>
 
 <script>
-  // 🟠 Shared Surcharges & Profit Logic
-  const rules = { ESS: 1.11, ES: 20, FS: 31.25, PROFIT: 15, GST: 18 };
+  // 🔗 Published Google Sheet Link (Connected)
+  const BASE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSAmLg-6alcw5asDwpcHZ7nf71y-2ITlVRzTEKHc4McYr4KDtZ06yJmRG4Wxn5uYHIpr5Y--BOM2sqk/pub?output=csv';
 
-  // 🟢 Data Array for All Accounts & Carriers
-  const carriersData = [
-    {
-      name: 'Aramex (Account 1)',
-      eta: '5-7 Days',
-      badge: '',
-      rates: [
-        { wt: 0.5, rate: 293.27, type: 'FLAT' }, { wt: 1.0, rate: 357.48, type: 'FLAT' },
-        { wt: 5.0, rate: 808.89, type: 'FLAT' }, { wt: 10.0, rate: 1612.99, type: 'FLAT' },
-        { wt: 20.0, rate: 3047.71, type: 'FLAT' }, { wt: 21.0, rate: 133.22, type: 'PER_KG' },
-        { wt: 45.0, rate: 116.92, type: 'PER_KG' }, { wt: 70.0, rate: 106.38, type: 'PER_KG' }
-      ]
-    },
-    {
-      name: 'Aramex (Account 2)',
-      eta: '5-7 Days',
-      badge: '<span class="badge">Best Rate</span>',
-      rates: [
-        { wt: 0.5, rate: 292.75, type: 'FLAT' }, { wt: 1.0, rate: 356.85, type: 'FLAT' },
-        { wt: 5.0, rate: 807.45, type: 'FLAT' }, { wt: 10.0, rate: 1610.13, type: 'FLAT' },
-        { wt: 20.0, rate: 3040.00, type: 'FLAT' }, { wt: 21.0, rate: 132.50, type: 'PER_KG' },
-        { wt: 45.0, rate: 115.80, type: 'PER_KG' }, { wt: 70.0, rate: 105.50, type: 'PER_KG' }
-      ]
-    },
-    {
-      name: 'FedEx Express',
-      eta: '2-3 Days',
-      badge: '<span class="fast-badge">Fastest</span>',
-      rates: [
-        { wt: 0.5, rate: 450.00, type: 'FLAT' }, { wt: 1.0, rate: 580.00, type: 'FLAT' },
-        { wt: 5.0, rate: 1250.00, type: 'FLAT' }, { wt: 10.0, rate: 2200.00, type: 'FLAT' },
-        { wt: 20.0, rate: 4100.00, type: 'FLAT' }, { wt: 21.0, rate: 185.00, type: 'PER_KG' },
-        { wt: 45.0, rate: 160.00, type: 'PER_KG' }, { wt: 70.0, rate: 145.00, type: 'PER_KG' }
-      ]
-    },
-    {
-      name: 'DHL Express',
-      eta: '2-4 Days',
-      badge: '',
-      rates: [
-        { wt: 0.5, rate: 480.00, type: 'FLAT' }, { wt: 1.0, rate: 610.00, type: 'FLAT' },
-        { wt: 5.0, rate: 1310.00, type: 'FLAT' }, { wt: 10.0, rate: 2350.00, type: 'FLAT' },
-        { wt: 20.0, rate: 4300.00, type: 'FLAT' }, { wt: 21.0, rate: 195.00, type: 'PER_KG' },
-        { wt: 45.0, rate: 170.00, type: 'PER_KG' }, { wt: 70.0, rate: 155.00, type: 'PER_KG' }
-      ]
-    },
-    {
-      name: 'ShipGlobal Economy',
-      eta: '7-9 Days',
-      badge: '',
-      rates: [
-        { wt: 0.5, rate: 250.00, type: 'FLAT' }, { wt: 1.0, rate: 320.00, type: 'FLAT' },
-        { wt: 5.0, rate: 720.00, type: 'FLAT' }, { wt: 10.0, rate: 1400.00, type: 'FLAT' },
-        { wt: 20.0, rate: 2700.00, type: 'FLAT' }, { wt: 21.0, rate: 118.00, type: 'PER_KG' },
-        { wt: 45.0, rate: 102.00, type: 'PER_KG' }, { wt: 70.0, rate: 92.00, type: 'PER_KG' }
-      ]
+  async function fetchSheetData(url) {
+    try {
+      const response = await fetch(url);
+      const csvText = await response.text();
+      return parseCSV(csvText);
+    } catch (e) {
+      console.error("Error fetching CSV:", e);
+      return null;
     }
-  ];
+  }
 
-  function calculateAllRates() {
+  function parseCSV(text) {
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    const rates = [];
+    const rules = { ESS: 1.11, ES: 20, FS: 31.25, PROFIT: 15, GST: 18 };
+
+    lines.forEach(line => {
+      const parts = line.split(',').map(p => p.replace(/"/g, '').trim());
+      
+      const wt = parseFloat(parts[0]);
+      const rate = parseFloat(parts[1]);
+      const type = parts[4];
+
+      if (!isNaN(wt) && !isNaN(rate)) {
+        rates.push({ wt, rate, type: type || 'FLAT' });
+      }
+
+      if (parts[0] === 'ESS') rules.ESS = parseFloat(parts[3]) || rules.ESS;
+      if (parts[0] === 'ES') rules.ES = parseFloat(parts[3]) || rules.ES;
+      if (parts[0] === 'FS') rules.FS = parseFloat(parts[3]) || rules.FS;
+      if (parts[0] === 'GST') rules.GST = parseFloat(parts[3]) || rules.GST;
+      if (parts[0] === 'PROFIT') rules.PROFIT = parseFloat(parts[3]) || rules.PROFIT;
+    });
+
+    return { rates, rules };
+  }
+
+  async function calculateLiveRates() {
+    document.getElementById('loader').style.display = 'block';
+    document.getElementById('resultBox').style.display = 'none';
+
+    // Fetching data live from Google Sheet link
+    const sheetData = await fetchSheetData(BASE_SHEET_URL);
+
+    document.getElementById('loader').style.display = 'none';
+
+    if (!sheetData || sheetData.rates.length === 0) {
+      alert("Google Sheet connect nahi ho payi! Link check karein.");
+      return;
+    }
+
     const cartons = parseInt(document.getElementById('cartons').value) || 1;
     const grossWt = parseFloat(document.getElementById('grossWeight').value) || 0;
     const l = parseFloat(document.getElementById('length').value) || 0;
@@ -152,43 +143,40 @@
     const volWt = ((l * w * h) / 5000) * cartons;
     const chargeableWt = Math.max(grossWt, volWt);
 
-    let rowsHTML = '';
+    const { rates, rules } = sheetData;
+    let baseFreight = 0;
 
-    carriersData.forEach(carrier => {
-      let baseFreight = 0;
-      if (chargeableWt <= 20) {
-        let matched = carrier.rates.find(r => r.wt >= chargeableWt && r.type === 'FLAT');
-        baseFreight = matched ? matched.rate : (chargeableWt * 160);
-      } else if (chargeableWt > 20 && chargeableWt < 45) {
-        let perKg = carrier.rates.find(r => r.wt === 21).rate;
-        baseFreight = chargeableWt * perKg;
-      } else if (chargeableWt >= 45 && chargeableWt < 70) {
-        let perKg = carrier.rates.find(r => r.wt === 45).rate;
-        baseFreight = chargeableWt * perKg;
-      } else {
-        let perKg = carrier.rates.find(r => r.wt === 70).rate;
-        baseFreight = chargeableWt * perKg;
-      }
+    if (chargeableWt <= 20) {
+      let matched = rates.find(r => r.wt >= chargeableWt && r.type === 'FLAT');
+      baseFreight = matched ? matched.rate : (chargeableWt * 160);
+    } else if (chargeableWt > 20 && chargeableWt < 45) {
+      let perKgObj = rates.find(r => r.wt === 21);
+      baseFreight = chargeableWt * (perKgObj ? perKgObj.rate : 133.22);
+    } else if (chargeableWt >= 45 && chargeableWt < 70) {
+      let perKgObj = rates.find(r => r.wt === 45);
+      baseFreight = chargeableWt * (perKgObj ? perKgObj.rate : 116.92);
+    } else {
+      let perKgObj = rates.find(r => r.wt === 70);
+      baseFreight = chargeableWt * (perKgObj ? perKgObj.rate : 106.38);
+    }
 
-      // Surcharges + Profit + GST Calculation
-      const essCost = chargeableWt * rules.ESS;
-      const esCost = (baseFreight * rules.ES) / 100;
-      const fsCost = (baseFreight * rules.FS) / 100;
-      
-      const totalCarrierCost = baseFreight + essCost + esCost + fsCost;
-      const sellingSubtotal = totalCarrierCost * (1 + (rules.PROFIT / 100));
-      const grandTotal = sellingSubtotal * (1 + (rules.GST / 100));
+    const essCost = chargeableWt * rules.ESS;
+    const esCost = (baseFreight * rules.ES) / 100;
+    const fsCost = (baseFreight * rules.FS) / 100;
 
-      const fmt = (num) => '₹' + num.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    const totalCarrierCost = baseFreight + essCost + esCost + fsCost;
+    const sellingSubtotal = totalCarrierCost * (1 + (rules.PROFIT / 100));
+    const grandTotal = sellingSubtotal * (1 + (rules.GST / 100));
 
-      rowsHTML += `
-        <tr>
-          <td><strong>${carrier.name}</strong> ${carrier.badge}</td>
-          <td>${carrier.eta}</td>
-          <td class="price-text">${fmt(grandTotal)}</td>
-        </tr>
-      `;
-    });
+    const fmt = (num) => '₹' + num.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+
+    let rowsHTML = `
+      <tr>
+        <td><strong>Aramex Express</strong> <span class="badge">Live Sync</span></td>
+        <td>5-7 Days</td>
+        <td class="price-text">${fmt(grandTotal)}</td>
+      </tr>
+    `;
 
     document.getElementById('weightSummary').innerText = 
       `Actual Wt: ${grossWt} KG | Volumetric Wt: ${volWt.toFixed(2)} KG | Chargeable Wt: ${chargeableWt.toFixed(2)} KG`;
