@@ -67,7 +67,7 @@
     <table class="rate-table">
       <thead>
         <tr>
-          <th>Carrier / Account</th>
+          <th>Carrier / Sheet Name</th>
           <th>ETA</th>
           <th>Subtotal</th>
           <th>GST (18%)</th>
@@ -101,14 +101,12 @@
     }
   }
 
-  // Smart CSV Parser with Comma Fix
   function parseCSV(text) {
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     const rates = [];
     const rules = { ESS: 0, ES: 0, FS: 0, GDA_PER_KG: 170, GDA_MIN: 30, PROFIT: 15, GST: 18 };
 
     lines.forEach(line => {
-      // Clean quotes and commas inside numbers
       const matches = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || line.split(',');
       const parts = matches.map(p => p.replace(/"/g, '').replace(/,/g, '').trim());
       
@@ -155,12 +153,13 @@
     const volWt = ((l * w * h) / 5000) * cartons;
     const chargeableWt = Math.max(grossWt, volWt);
 
+    // Exact Sheet Tab Names
     const accountsList = [
-      { name: 'Aramex (Account 1)', eta: '5-7 Days', type: 'ARAMEX', data: acc1Data },
-      { name: 'Aramex (Account 2)', eta: '5-7 Days', type: 'ARAMEX', data: acc2Data },
-      { name: 'ShipGlobal Express', eta: '6-8 Days', type: 'SHIPGLOBAL', data: sgData },
-      { name: 'DHL Express (Account 1)', eta: '2-4 Days', type: 'DHL', data: dhl1Data },
-      { name: 'DHL Express (Account 2)', eta: '2-4 Days', type: 'DHL', data: dhl2Data }
+      { name: 'UAE_Aramex_Account1', eta: '5-7 Days', type: 'ARAMEX', data: acc1Data },
+      { name: 'UAE_Aramex_Account2', eta: '5-7 Days', type: 'ARAMEX', data: acc2Data },
+      { name: 'UAE_ShipGlobal', eta: '6-8 Days', type: 'SHIPGLOBAL', data: sgData },
+      { name: 'UAE_DHL', eta: '2-4 Days', type: 'DHL', data: dhl1Data },
+      { name: 'UAE_DHL_Account2', eta: '2-4 Days', type: 'DHL', data: dhl2Data }
     ];
 
     let rowsHTML = '';
