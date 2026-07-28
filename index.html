@@ -27,18 +27,18 @@
       position: relative;
     }
 
-    /* Fixed Working Delivery Character Graphic */
+    /* Proper HD Delivery Person PNG */
     .delivery-character {
-      width: 220px;
+      width: 240px;
       height: auto;
       position: absolute;
-      left: -190px;
-      bottom: 0px;
+      left: -210px;
+      bottom: -10px;
       z-index: 20;
-      filter: drop-shadow(0px 10px 20px rgba(0,0,0,0.5));
+      filter: drop-shadow(0px 10px 20px rgba(0,0,0,0.4));
     }
 
-    @media(max-width: 1100px) {
+    @media(max-width: 1150px) {
       .delivery-character { display: none; }
     }
 
@@ -135,7 +135,14 @@
     .badge { background: #38a169; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; margin-left: 5px; }
     .loader { display: none; text-align: center; color: #0b2368; font-weight: bold; margin-top: 15px; }
 
-    .contact-section { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center; }
+    /* Partners Logo Section */
+    .partner-section { margin-top: 25px; text-align: center; }
+    .partner-title { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .partner-badges { display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap; opacity: 0.85; }
+    .partner-badge { background: #f8fafc; border: 1px solid #e2e8f0; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 800; color: #0b2368; }
+
+    /* Contact Section Styling */
+    .contact-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center; }
     .contact-title { font-size: 15px; font-weight: 700; color: #0b2368; margin-bottom: 14px; }
     .btn-container { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
     .btn-contact { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; padding: 12px 22px; border-radius: 8px; font-weight: bold; font-size: 14px; transition: all 0.2s; }
@@ -147,19 +154,8 @@
 <body>
 
 <div class="main-wrapper">
-  <!-- Working Transparent Delivery SVG Graphic -->
-  <svg class="delivery-character" viewBox="0 0 200 300" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <!-- Courier Person Vector Art -->
-    <path d="M70 60 C70 45 85 30 100 30 C115 30 130 45 130 60 C130 75 115 85 100 85 C85 85 70 75 70 60 Z" fill="#ff6600"/>
-    <path d="M60 40 C70 25 100 20 140 35 L125 45 Z" fill="#0b2368"/>
-    <circle cx="100" cy="60" r="22" fill="#ffdbac"/>
-    <path d="M50 100 C50 85 70 85 100 85 C130 85 150 85 150 100 L160 210 H40 Z" fill="#ff6600"/>
-    <!-- Parcel Box -->
-    <rect x="55" y="120" width="90" height="70" rx="6" fill="#d9a05b" stroke="#8b5a2b" stroke-width="3"/>
-    <line x1="100" y1="120" x2="100" y2="190" stroke="#8b5a2b" stroke-width="3"/>
-    <path d="M40 210 L30 290 H80 L70 210 Z" fill="#0b2368"/>
-    <path d="M160 210 L170 290 H120 L130 210 Z" fill="#0b2368"/>
-  </svg>
+  <!-- Clean PNG Delivery Boy Character -->
+  <img src="https://i.ibb.co/VMy4v2p/delivery-guy.png" alt="Courier Delivery Character" class="delivery-character" onerror="this.style.display='none'">
 
   <div class="calc-card">
     
@@ -229,6 +225,17 @@
         </thead>
         <tbody id="comparisonRows"></tbody>
       </table>
+    </div>
+
+    <!-- Carrier Trust Logos -->
+    <div class="partner-section">
+      <div class="partner-title">Official Logistics Network Partners</div>
+      <div class="partner-badges">
+        <span class="partner-badge" style="color:#d40511;">DHL Express</span>
+        <span class="partner-badge" style="color:#e50012;">Aramex</span>
+        <span class="partner-badge" style="color:#4d148c;">FedEx</span>
+        <span class="partner-badge" style="color:#0066cc;">ShipGlobal</span>
+      </div>
     </div>
 
     <div class="contact-section">
