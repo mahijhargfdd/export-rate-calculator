@@ -31,12 +31,10 @@
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
     
-    /* Original Logo Header Styling */
     .brand-header { text-align: center; margin-bottom: 25px; }
     .brand-logo-img { max-width: 260px; height: auto; display: block; margin: 0 auto 8px auto; }
     .brand-subtitle { color: #64748b; font-size: 14px; font-weight: 600; }
 
-    /* Modern Trust Bar */
     .trust-bar {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -125,13 +123,11 @@
     .cheapest-tag { background: #f97316; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-left: 6px; }
     .loader { display: none; text-align: center; color: #0f172a; font-weight: 700; margin-top: 20px; }
 
-    /* Partner Logos styling */
     .partner-section { margin-top: 30px; text-align: center; }
     .partner-title { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px; }
     .partner-badges { display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap; }
     .partner-badge { background: #ffffff; border: 1px solid #e2e8f0; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 800; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
 
-    /* Contact Section Styling */
     .contact-section { margin-top: 25px; padding-top: 25px; border-top: 1px solid #e2e8f0; text-align: center; }
     .contact-title { font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 16px; }
     .btn-container { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
@@ -145,13 +141,11 @@
 
 <div class="calc-card">
   
-  <!-- ORIGINAL COURIERBIRD LOGO HEADER -->
   <div class="brand-header">
     <img src="https://i.ibb.co/ZzSD1DDc/image.png" alt="CourierBird Logo" class="brand-logo-img">
     <div class="brand-subtitle">Multi-Carrier Live Shipping Rate Calculator</div>
   </div>
 
-  <!-- Trust Bar with Icons -->
   <div class="trust-bar">
     <div class="trust-item"><i class="fa-solid fa-truck-ramp-box"></i> Doorstep Pickup</div>
     <div class="trust-item"><i class="fa-solid fa-rotate"></i> Live Sync Rates</div>
@@ -213,7 +207,6 @@
     </table>
   </div>
 
-  <!-- Carrier Logos -->
   <div class="partner-section">
     <div class="partner-title">Official Logistics Network Partners</div>
     <div class="partner-badges">
@@ -258,19 +251,38 @@
     }
   }
 
+  // Smart CSV Line Splitter to handle commas inside quotes
+  function parseCSVLine(line) {
+    const values = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        values.push(current.replace(/^"|"$/g, '').trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    values.push(current.replace(/^"|"$/g, '').trim());
+    return values;
+  }
+
   function parseCSV(text) {
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     const rates = [];
     const rules = { ESS: 0, ES: 0, FS: 0, GDA_PER_KG: 170, GDA_MIN: 30, PROFIT: 15, GST: 18, DEFAULT_ETA: '' };
 
     lines.forEach(line => {
-      const matches = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || line.split(',');
-      const parts = matches.map(p => p.replace(/"/g, '').replace(/,/g, '').trim());
+      const parts = parseCSVLine(line);
       
       const wt = parseFloat(parts[0]);
       const rate = parseFloat(parts[1]);
-      const etaVal = parts[3];   // Column D is Index 3 (ETA)
-      const typeVal = parts[4];  // Column E is Index 4 (Rate_Type)
+      const etaVal = parts[3];   // Column D (Index 3 is ETA)
+      const typeVal = parts[4];  // Column E (Index 4 is Rate_Type)
 
       if (!isNaN(wt) && !isNaN(rate)) {
         rates.push({ wt, rate, eta: etaVal || '', type: typeVal || 'FLAT' });
@@ -332,7 +344,7 @@
       const { rates, rules } = acc.data;
       let baseFreight = 0;
       let totalCarrierCost = 0;
-      let matchedEta = rules.DEFAULT_ETA || 'Standard Express';
+      let matchedEta = rules.DEFAULT_ETA || '3-5 Days';
 
       if (acc.type === 'ARAMEX') {
         if (chargeableWt <= 20) {
