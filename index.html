@@ -7,7 +7,7 @@
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
     body { background: #f0f4f8; padding: 20px; margin: 0; }
-    .calc-card { max-width: 700px; margin: 20px auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+    .calc-card { max-width: 750px; margin: 20px auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
     h2 { color: #0f2942; margin-top: 0; text-align: center; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     @media(max-width: 500px){ .grid { grid-template-columns: 1fr; } }
@@ -24,6 +24,7 @@
     .rate-table th, .rate-table td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
     .rate-table th { background: #edf2f7; color: #2d3748; }
     .price-text { font-size: 16px; font-weight: bold; color: #0066cc; }
+    .gst-text { font-size: 12px; color: #718096; font-weight: normal; }
     .badge { background: #38a169; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; margin-left: 5px; }
     .loader { display: none; text-align: center; color: #0066cc; font-weight: bold; margin-top: 10px; }
   </style>
@@ -47,18 +48,18 @@
     </div>
     <div class="form-group">
       <label>Gross Weight (KG):</label>
-      <input type="number" id="grossWeight" value="5" step="0.5">
+      <input type="number" id="grossWeight" value="0.5" step="0.5">
     </div>
   </div>
 
   <label>Single Box Dimensions (cm):</label>
   <div class="grid">
-    <input type="number" id="length" placeholder="Length" value="30">
-    <input type="number" id="width" placeholder="Width" value="20">
-    <input type="number" id="height" placeholder="Height" value="20">
+    <input type="number" id="length" placeholder="Length" value="5">
+    <input type="number" id="width" placeholder="Width" value="5">
+    <input type="number" id="height" placeholder="Height" value="4">
   </div>
 
-  <button onclick="calculateLiveRates()">Fetch Rates Live From Google Sheet</button>
+  <button onclick="calculateLiveRates()">Compare All Live Rates</button>
   <div class="loader" id="loader">Fetching latest rates from Google Sheets... ⏳</div>
 
   <div class="result-box" id="resultBox" style="display:none;">
@@ -69,19 +70,25 @@
         <tr>
           <th>Carrier / Account</th>
           <th>ETA</th>
-          <th>Total Cost (Inc. GST)</th>
+          <th>Subtotal</th>
+          <th>GST (18%)</th>
+          <th>Final Total</th>
         </tr>
       </thead>
       <tbody id="comparisonRows">
-        <!-- Live Google Sheet Data -->
+        <!-- Dynamic Live Data -->
       </tbody>
     </table>
   </div>
 </div>
 
 <script>
-  // 🔗 Published Google Sheet Link (Connected)
-  const BASE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSAmLg-6alcw5asDwpcHZ7nf71y-2ITlVRzTEKHc4McYr4KDtZ06yJmRG4Wxn5uYHIpr5Y--BOM2sqk/pub?output=csv';
+  // Base CSV Link
+  const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSAmLg-6alcw5asDwpcHZ7nf71y-2ITlVRzTEKHc4McYr4KDtZ06yJmRG4Wxn5uYHIpr5Y--BOM2sqk/pub?single=true&output=csv';
+
+  // Connected Tabs
+  const URL_ACC1 = BASE_URL + '&gid=0';
+  const URL_ACC2 = BASE_URL + '&gid=236963727';
 
   async function fetchSheetData(url) {
     try {
@@ -97,7 +104,7 @@
   function parseCSV(text) {
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     const rates = [];
-    const rules = { ESS: 1.11, ES: 20, FS: 31.25, PROFIT: 15, GST: 18 };
+    const rules = { ESS: 1.11, ES: 0, FS: 0, PROFIT: 15, GST: 18 };
 
     lines.forEach(line => {
       const parts = line.split(',').map(p => p.replace(/"/g, '').trim());
@@ -111,8 +118,8 @@
       }
 
       if (parts[0] === 'ESS') rules.ESS = parseFloat(parts[3]) || rules.ESS;
-      if (parts[0] === 'ES') rules.ES = parseFloat(parts[3]) || rules.ES;
-      if (parts[0] === 'FS') rules.FS = parseFloat(parts[3]) || rules.FS;
+      if (parts[0] === 'ES') rules.ES = parseFloat(parts[3]) || 0;
+      if (parts[0] === 'FS') rules.FS = parseFloat(parts[3]) || 0;
       if (parts[0] === 'GST') rules.GST = parseFloat(parts[3]) || rules.GST;
       if (parts[0] === 'PROFIT') rules.PROFIT = parseFloat(parts[3]) || rules.PROFIT;
     });
@@ -124,15 +131,12 @@
     document.getElementById('loader').style.display = 'block';
     document.getElementById('resultBox').style.display = 'none';
 
-    // Fetching data live from Google Sheet link
-    const sheetData = await fetchSheetData(BASE_SHEET_URL);
+    const [acc1Data, acc2Data] = await Promise.all([
+      fetchSheetData(URL_ACC1),
+      fetchSheetData(URL_ACC2)
+    ]);
 
     document.getElementById('loader').style.display = 'none';
-
-    if (!sheetData || sheetData.rates.length === 0) {
-      alert("Google Sheet connect nahi ho payi! Link check karein.");
-      return;
-    }
 
     const cartons = parseInt(document.getElementById('cartons').value) || 1;
     const grossWt = parseFloat(document.getElementById('grossWeight').value) || 0;
@@ -143,40 +147,48 @@
     const volWt = ((l * w * h) / 5000) * cartons;
     const chargeableWt = Math.max(grossWt, volWt);
 
-    const { rates, rules } = sheetData;
-    let baseFreight = 0;
+    const accountsList = [
+      { name: 'Aramex (Account 1)', eta: '5-7 Days', data: acc1Data },
+      { name: 'Aramex (Account 2)', eta: '5-7 Days', data: acc2Data }
+    ];
 
-    if (chargeableWt <= 20) {
-      let matched = rates.find(r => r.wt >= chargeableWt && r.type === 'FLAT');
-      baseFreight = matched ? matched.rate : (chargeableWt * 160);
-    } else if (chargeableWt > 20 && chargeableWt < 45) {
-      let perKgObj = rates.find(r => r.wt === 21);
-      baseFreight = chargeableWt * (perKgObj ? perKgObj.rate : 133.22);
-    } else if (chargeableWt >= 45 && chargeableWt < 70) {
-      let perKgObj = rates.find(r => r.wt === 45);
-      baseFreight = chargeableWt * (perKgObj ? perKgObj.rate : 116.92);
-    } else {
-      let perKgObj = rates.find(r => r.wt === 70);
-      baseFreight = chargeableWt * (perKgObj ? perKgObj.rate : 106.38);
-    }
+    let rowsHTML = '';
 
-    const essCost = chargeableWt * rules.ESS;
-    const esCost = (baseFreight * rules.ES) / 100;
-    const fsCost = (baseFreight * rules.FS) / 100;
+    accountsList.forEach(acc => {
+      if (!acc.data || acc.data.rates.length === 0) return;
 
-    const totalCarrierCost = baseFreight + essCost + esCost + fsCost;
-    const sellingSubtotal = totalCarrierCost * (1 + (rules.PROFIT / 100));
-    const grandTotal = sellingSubtotal * (1 + (rules.GST / 100));
+      const { rates, rules } = acc.data;
+      let baseFreight = 0;
 
-    const fmt = (num) => '₹' + num.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+      if (chargeableWt <= 20) {
+        let matched = rates.find(r => r.wt >= chargeableWt && r.type === 'FLAT');
+        baseFreight = matched ? matched.rate : (chargeableWt * 160);
+      } else {
+        let perKgObj = rates.find(r => r.wt > 20);
+        baseFreight = chargeableWt * (perKgObj ? perKgObj.rate : 133);
+      }
 
-    let rowsHTML = `
-      <tr>
-        <td><strong>Aramex Express</strong> <span class="badge">Live Sync</span></td>
-        <td>5-7 Days</td>
-        <td class="price-text">${fmt(grandTotal)}</td>
-      </tr>
-    `;
+      const essCost = chargeableWt * rules.ESS;
+      const esCost = (baseFreight * rules.ES) / 100;
+      const fsCost = (baseFreight * rules.FS) / 100;
+
+      const totalCarrierCost = baseFreight + essCost + esCost + fsCost;
+      const sellingSubtotal = totalCarrierCost * (1 + (rules.PROFIT / 100));
+      const gstAmount = (sellingSubtotal * rules.GST) / 100;
+      const grandTotal = sellingSubtotal + gstAmount;
+
+      const fmt = (num) => '₹' + num.toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+
+      rowsHTML += `
+        <tr>
+          <td><strong>${acc.name}</strong> <span class="badge">Live Sync</span></td>
+          <td>${acc.eta}</td>
+          <td>${fmt(sellingSubtotal)}</td>
+          <td style="color: #e53e3e; font-weight: 600;">+ ${fmt(gstAmount)}</td>
+          <td class="price-text">${fmt(grandTotal)}</td>
+        </tr>
+      `;
+    });
 
     document.getElementById('weightSummary').innerText = 
       `Actual Wt: ${grossWt} KG | Volumetric Wt: ${volWt.toFixed(2)} KG | Chargeable Wt: ${chargeableWt.toFixed(2)} KG`;
