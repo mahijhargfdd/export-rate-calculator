@@ -31,7 +31,7 @@
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
     
-    /* Exact Original Logo Header Styling */
+    /* Original Logo Header Styling */
     .brand-header { text-align: center; margin-bottom: 25px; }
     .brand-logo-img { max-width: 260px; height: auto; display: block; margin: 0 auto 8px auto; }
     .brand-subtitle { color: #64748b; font-size: 14px; font-weight: 600; }
@@ -270,16 +270,19 @@
       const wt = parseFloat(parts[0]);
       const rate = parseFloat(parts[1]);
       const type = parts[4];
-      const sheetEta = parts[2]; // Captures ETA column if present
+      const col2Value = parts[2];
 
+      // Parse rates
       if (!isNaN(wt) && !isNaN(rate)) {
         rates.push({ wt, rate, type: type || 'FLAT' });
       }
 
-      if (sheetEta && sheetEta.toLowerCase().includes('day')) {
-        rules.ETA = sheetEta;
+      // Read ETA from sheet rows directly (looks for "day" text in column C/3rd column)
+      if (col2Value && col2Value.toLowerCase().includes('day')) {
+        rules.ETA = col2Value;
       }
 
+      // Check key-value rules
       if (parts[0] === 'ESS') rules.ESS = parseFloat(parts[3]) || 0;
       if (parts[0] === 'ES') rules.ES = parseFloat(parts[3]) || 0;
       if (parts[0] === 'FS') rules.FS = parseFloat(parts[3]) || 0;
@@ -287,7 +290,7 @@
       if (parts[0] === 'GDA_MIN') rules.GDA_MIN = parseFloat(parts[3]) || 30;
       if (parts[0] === 'GST') rules.GST = parseFloat(parts[3]) || 18;
       if (parts[0] === 'PROFIT') rules.PROFIT = parseFloat(parts[3]) || 15;
-      if (parts[0] === 'ETA') rules.ETA = parts[3] || parts[2] || '';
+      if (parts[0] === 'ETA') rules.ETA = parts[3] || parts[2] || parts[1] || '';
     });
 
     return { rates, rules };
@@ -319,11 +322,11 @@
     const chargeableWt = Math.max(grossWt, volWt);
 
     const accountsList = [
-      { name: 'UAE_Aramex_Account1', defaultEta: '4-6 Days', type: 'ARAMEX', data: acc1Data },
-      { name: 'UAE_Aramex_Account2', defaultEta: '4-6 Days', type: 'ARAMEX', data: acc2Data },
-      { name: 'UAE_ShipGlobal', defaultEta: '5-7 Days', type: 'SHIPGLOBAL', data: sgData },
-      { name: 'UAE_DHL', defaultEta: '3-5 Days', type: 'DHL', data: dhl1Data },
-      { name: 'UAE_DHL_Account2', defaultEta: '3-5 Days', type: 'DHL', data: dhl2Data }
+      { name: 'UAE_Aramex_Account1', type: 'ARAMEX', data: acc1Data },
+      { name: 'UAE_Aramex_Account2', type: 'ARAMEX', data: acc2Data },
+      { name: 'UAE_ShipGlobal', type: 'SHIPGLOBAL', data: sgData },
+      { name: 'UAE_DHL', type: 'DHL', data: dhl1Data },
+      { name: 'UAE_DHL_Account2', type: 'DHL', data: dhl2Data }
     ];
 
     let calculatedResults = [];
@@ -335,8 +338,8 @@
       let baseFreight = 0;
       let totalCarrierCost = 0;
 
-      // Real ETA from Sheet (with default fallback)
-      const liveEta = rules.ETA && rules.ETA.trim() !== '' ? rules.ETA : acc.defaultEta;
+      // Pure Direct Live ETA from Google Sheet (Fallback to 'Standard' if cell is totally empty)
+      const liveEta = (rules.ETA && rules.ETA.trim() !== '') ? rules.ETA : 'Standard Express';
 
       if (acc.type === 'ARAMEX') {
         if (chargeableWt <= 20) {
