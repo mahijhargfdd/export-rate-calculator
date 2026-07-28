@@ -3,14 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Global Live Shipping Calculator</title>
+  <title>CourierBird - Live Shipping Calculator</title>
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
     body { background: #f0f4f8; padding: 20px; margin: 0; }
-    .calc-card { max-width: 900px; margin: 20px auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
-    h2 { color: #0f2942; margin-top: 0; text-align: center; }
+    .calc-card { max-width: 950px; margin: 20px auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+    .brand-title { text-align: center; color: #0066cc; margin-bottom: 5px; font-size: 28px; font-weight: 800; }
+    .brand-title span { color: #ff6600; }
+    h2 { color: #0f2942; margin-top: 0; text-align: center; font-size: 18px; margin-bottom: 25px; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    @media(max-width: 500px){ .grid { grid-template-columns: 1fr; } }
+    @media(max-width: 600px){ .grid { grid-template-columns: 1fr; } }
     .form-group { margin-bottom: 15px; }
     label { display: block; font-weight: 600; font-size: 13px; color: #333; margin-bottom: 5px; }
     input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
@@ -31,13 +33,22 @@
 <body>
 
 <div class="calc-card">
-  <h2>🚢 Multi-Carrier Live Shipping Rate Calculator</h2>
+  <div class="brand-title">Courier<span>Bird</span> 🦅</div>
+  <h2>Multi-Carrier Live Shipping Rate Calculator</h2>
 
-  <div class="form-group">
-    <label>Destination Country:</label>
-    <select id="country">
-      <option value="UAE">UAE (United Arab Emirates)</option>
-    </select>
+  <div class="grid">
+    <div class="form-group">
+      <label>Ship From (Origin):</label>
+      <select id="fromCountry">
+        <option value="India">India (IN)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Destination Country:</label>
+      <select id="country">
+        <option value="UAE">UAE (United Arab Emirates)</option>
+      </select>
+    </div>
   </div>
 
   <div class="grid">
@@ -68,6 +79,7 @@
       <thead>
         <tr>
           <th>Carrier / Sheet Name</th>
+          <th>Route</th>
           <th>ETA</th>
           <th>Subtotal</th>
           <th>GST (18%)</th>
@@ -144,6 +156,8 @@
 
     document.getElementById('loader').style.display = 'none';
 
+    const fromCountry = document.getElementById('fromCountry').value;
+    const toCountry = document.getElementById('country').value;
     const cartons = parseInt(document.getElementById('cartons').value) || 1;
     const grossWt = parseFloat(document.getElementById('grossWeight').value) || 0;
     const l = parseFloat(document.getElementById('length').value) || 0;
@@ -153,7 +167,6 @@
     const volWt = ((l * w * h) / 5000) * cartons;
     const chargeableWt = Math.max(grossWt, volWt);
 
-    // Exact Sheet Tab Names
     const accountsList = [
       { name: 'UAE_Aramex_Account1', eta: '5-7 Days', type: 'ARAMEX', data: acc1Data },
       { name: 'UAE_Aramex_Account2', eta: '5-7 Days', type: 'ARAMEX', data: acc2Data },
@@ -222,6 +235,7 @@
       rowsHTML += `
         <tr>
           <td><strong>${acc.name}</strong> <span class="badge">Live Sync</span></td>
+          <td>${fromCountry} ➔ ${toCountry}</td>
           <td>${acc.eta}</td>
           <td>${fmt(sellingSubtotal)}</td>
           <td style="color: #e53e3e; font-weight: 600;">+ ${fmt(gstAmount)}</td>
