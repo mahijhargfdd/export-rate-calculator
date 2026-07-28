@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Global Live Rate Calculator</title>
+  <title>Global Live Shipping Calculator</title>
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
     body { background: #f0f4f8; padding: 20px; margin: 0; }
-    .calc-card { max-width: 750px; margin: 20px auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+    .calc-card { max-width: 850px; margin: 20px auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
     h2 { color: #0f2942; margin-top: 0; text-align: center; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     @media(max-width: 500px){ .grid { grid-template-columns: 1fr; } }
@@ -24,7 +24,6 @@
     .rate-table th, .rate-table td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
     .rate-table th { background: #edf2f7; color: #2d3748; }
     .price-text { font-size: 16px; font-weight: bold; color: #0066cc; }
-    .gst-text { font-size: 12px; color: #718096; font-weight: normal; }
     .badge { background: #38a169; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; margin-left: 5px; }
     .loader { display: none; text-align: center; color: #0066cc; font-weight: bold; margin-top: 10px; }
   </style>
@@ -32,7 +31,7 @@
 <body>
 
 <div class="calc-card">
-  <h2>🚢 International Shipping Rate Calculator</h2>
+  <h2>🚢 Multi-Carrier Live Shipping Rate Calculator</h2>
 
   <div class="form-group">
     <label>Destination Country:</label>
@@ -48,7 +47,7 @@
     </div>
     <div class="form-group">
       <label>Gross Weight (KG):</label>
-      <input type="number" id="grossWeight" value="0.5" step="0.5">
+      <input type="number" id="grossWeight" value="2" step="0.5">
     </div>
   </div>
 
@@ -60,7 +59,7 @@
   </div>
 
   <button onclick="calculateLiveRates()">Compare All Live Rates</button>
-  <div class="loader" id="loader">Fetching latest rates from Google Sheets... ⏳</div>
+  <div class="loader" id="loader">Fetching latest live rates from Google Sheets... ⏳</div>
 
   <div class="result-box" id="resultBox" style="display:none;">
     <div class="vol-info" id="weightSummary"></div>
@@ -76,19 +75,19 @@
         </tr>
       </thead>
       <tbody id="comparisonRows">
-        <!-- Dynamic Live Data -->
+        <!-- Live Google Sheet Data -->
       </tbody>
     </table>
   </div>
 </div>
 
 <script>
-  // Base CSV Link
   const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSAmLg-6alcw5asDwpcHZ7nf71y-2ITlVRzTEKHc4McYr4KDtZ06yJmRG4Wxn5uYHIpr5Y--BOM2sqk/pub?single=true&output=csv';
 
-  // Connected Tabs
+  // Connected Sheet Tabs
   const URL_ACC1 = BASE_URL + '&gid=0';
   const URL_ACC2 = BASE_URL + '&gid=236963727';
+  const URL_SHIPGLOBAL = BASE_URL + '&gid=145078686'; // 👈 UAE_ShipGlobal GID Connected!
 
   async function fetchSheetData(url) {
     try {
@@ -104,7 +103,7 @@
   function parseCSV(text) {
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     const rates = [];
-    const rules = { ESS: 1.11, ES: 0, FS: 0, PROFIT: 15, GST: 18 };
+    const rules = { ESS: 0, ES: 0, FS: 0, GDA_PER_KG: 170, GDA_MIN: 30, PROFIT: 15, GST: 18 };
 
     lines.forEach(line => {
       const parts = line.split(',').map(p => p.replace(/"/g, '').trim());
@@ -117,11 +116,13 @@
         rates.push({ wt, rate, type: type || 'FLAT' });
       }
 
-      if (parts[0] === 'ESS') rules.ESS = parseFloat(parts[3]) || rules.ESS;
+      if (parts[0] === 'ESS') rules.ESS = parseFloat(parts[3]) || 0;
       if (parts[0] === 'ES') rules.ES = parseFloat(parts[3]) || 0;
       if (parts[0] === 'FS') rules.FS = parseFloat(parts[3]) || 0;
-      if (parts[0] === 'GST') rules.GST = parseFloat(parts[3]) || rules.GST;
-      if (parts[0] === 'PROFIT') rules.PROFIT = parseFloat(parts[3]) || rules.PROFIT;
+      if (parts[0] === 'GDA_PER_KG') rules.GDA_PER_KG = parseFloat(parts[3]) || 170;
+      if (parts[0] === 'GDA_MIN') rules.GDA_MIN = parseFloat(parts[3]) || 30;
+      if (parts[0] === 'GST') rules.GST = parseFloat(parts[3]) || 18;
+      if (parts[0] === 'PROFIT') rules.PROFIT = parseFloat(parts[3]) || 15;
     });
 
     return { rates, rules };
@@ -131,9 +132,10 @@
     document.getElementById('loader').style.display = 'block';
     document.getElementById('resultBox').style.display = 'none';
 
-    const [acc1Data, acc2Data] = await Promise.all([
+    const [acc1Data, acc2Data, sgData] = await Promise.all([
       fetchSheetData(URL_ACC1),
-      fetchSheetData(URL_ACC2)
+      fetchSheetData(URL_ACC2),
+      fetchSheetData(URL_SHIPGLOBAL)
     ]);
 
     document.getElementById('loader').style.display = 'none';
@@ -148,8 +150,9 @@
     const chargeableWt = Math.max(grossWt, volWt);
 
     const accountsList = [
-      { name: 'Aramex (Account 1)', eta: '5-7 Days', data: acc1Data },
-      { name: 'Aramex (Account 2)', eta: '5-7 Days', data: acc2Data }
+      { name: 'Aramex (Account 1)', eta: '5-7 Days', type: 'ARAMEX', data: acc1Data },
+      { name: 'Aramex (Account 2)', eta: '5-7 Days', type: 'ARAMEX', data: acc2Data },
+      { name: 'ShipGlobal Express', eta: '6-8 Days', type: 'SHIPGLOBAL', data: sgData }
     ];
 
     let rowsHTML = '';
@@ -159,20 +162,36 @@
 
       const { rates, rules } = acc.data;
       let baseFreight = 0;
+      let totalCarrierCost = 0;
 
-      if (chargeableWt <= 20) {
-        let matched = rates.find(r => r.wt >= chargeableWt && r.type === 'FLAT');
-        baseFreight = matched ? matched.rate : (chargeableWt * 160);
-      } else {
-        let perKgObj = rates.find(r => r.wt > 20);
-        baseFreight = chargeableWt * (perKgObj ? perKgObj.rate : 133);
+      if (acc.type === 'ARAMEX') {
+        if (chargeableWt <= 20) {
+          let matched = rates.find(r => r.wt >= chargeableWt && r.type === 'FLAT');
+          baseFreight = matched ? matched.rate : (chargeableWt * 160);
+        } else {
+          let perKgObj = rates.find(r => r.wt > 20);
+          baseFreight = chargeableWt * (perKgObj ? perKgObj.rate : 133);
+        }
+
+        const essCost = chargeableWt * rules.ESS;
+        const esCost = (baseFreight * rules.ES) / 100;
+        const fsCost = (baseFreight * rules.FS) / 100;
+        totalCarrierCost = baseFreight + essCost + esCost + fsCost;
+
+      } else if (acc.type === 'SHIPGLOBAL') {
+        if (chargeableWt <= 25) {
+          let matched = rates.find(r => r.wt >= chargeableWt && r.type === 'FLAT');
+          baseFreight = matched ? matched.rate : 4953;
+        } else {
+          let perKgRate = rates.find(r => r.type === 'PER_KG') ? rates.find(r => r.type === 'PER_KG').rate : 189.7;
+          baseFreight = 4005 + ((chargeableWt - 20) * perKgRate);
+        }
+
+        // GDA Logic: Max of ₹30 OR (Weight * ₹170)
+        const gdaCost = Math.max(rules.GDA_MIN, chargeableWt * rules.GDA_PER_KG);
+        totalCarrierCost = baseFreight + gdaCost;
       }
 
-      const essCost = chargeableWt * rules.ESS;
-      const esCost = (baseFreight * rules.ES) / 100;
-      const fsCost = (baseFreight * rules.FS) / 100;
-
-      const totalCarrierCost = baseFreight + essCost + esCost + fsCost;
       const sellingSubtotal = totalCarrierCost * (1 + (rules.PROFIT / 100));
       const gstAmount = (sellingSubtotal * rules.GST) / 100;
       const grandTotal = sellingSubtotal + gstAmount;
