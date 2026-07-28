@@ -7,7 +7,6 @@
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; }
     
-    /* Modern Professional Logistics Background */
     body { 
       background: linear-gradient(135deg, #0b2368 0%, #1e3c72 50%, #2a5298 100%);
       min-height: 100vh;
@@ -17,35 +16,49 @@
       align-items: center;
       justify-content: center;
       position: relative;
+      overflow-x: hidden;
     }
 
-    /* Subtle Overlay Graphic Elements */
-    body::before {
-      content: "";
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: radial-gradient(circle at 80% 20%, rgba(255, 102, 0, 0.15) 0%, transparent 40%),
-                  radial-gradient(circle at 10% 80%, rgba(37, 211, 102, 0.1) 0%, transparent 35%);
-      pointer-events: none;
+    /* Main Container with Delivery Character */
+    .main-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      max-width: 1100px;
+      width: 100%;
+      position: relative;
     }
-    
+
+    /* Delivery Guy Character Styling */
+    .delivery-character {
+      width: 280px;
+      height: auto;
+      position: absolute;
+      left: -200px;
+      bottom: -20px;
+      z-index: 20;
+      filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.4));
+    }
+
+    @media(max-width: 1024px) {
+      .delivery-character { display: none; } /* Mobile/Tablet par hide/adjust */
+    }
+
     .calc-card { 
       width: 100%;
-      max-width: 950px; 
-      margin: 0 auto; 
+      max-width: 900px; 
       background: #ffffff; 
       padding: 35px 40px; 
       border-radius: 16px; 
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.1); 
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25); 
       position: relative;
       z-index: 10;
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
     
-    /* CourierBird Brand Header Styling */
     .brand-header { text-align: center; margin-bottom: 25px; }
     .brand-logo-img { max-width: 260px; height: auto; display: block; margin: 0 auto 8px auto; }
-    .brand-subtitle { color: #64748b; font-size: 15px; font-weight: 600; letter-spacing: 0.3px; }
+    .brand-subtitle { color: #64748b; font-size: 15px; font-weight: 600; }
     
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
     @media(max-width: 600px){ 
@@ -63,7 +76,6 @@
       font-size: 14px; 
       color: #0f172a;
       outline: none;
-      transition: all 0.2s ease-in-out;
       background: #f8fafc;
     }
 
@@ -73,7 +85,6 @@
       box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.15);
     }
     
-    /* Matching Orange Theme Button */
     button { 
       width: 100%; 
       background: linear-gradient(135deg, #ff6600 0%, #e05500 100%); 
@@ -86,11 +97,6 @@
       cursor: pointer; 
       margin-top: 10px; 
       box-shadow: 0 4px 12px rgba(255, 102, 0, 0.3);
-      transition: all 0.2s; 
-    }
-    button:hover { 
-      transform: translateY(-1px);
-      box-shadow: 0 6px 15px rgba(255, 102, 0, 0.4);
     }
     
     .result-box { margin-top: 25px; padding: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; }
@@ -98,102 +104,97 @@
     
     .rate-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     .rate-table th, .rate-table td { padding: 14px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
-    .rate-table th { background: #0b2368; color: #ffffff; font-weight: 600; }
-    .rate-table th:first-child { border-top-left-radius: 8px; }
-    .rate-table th:last-child { border-top-right-radius: 8px; }
+    .rate-table th { background: #0b2368; color: #ffffff; }
     .price-text { font-size: 16px; font-weight: bold; color: #ff6600; }
     .badge { background: #38a169; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; margin-left: 5px; }
     .loader { display: none; text-align: center; color: #0b2368; font-weight: bold; margin-top: 15px; }
 
-    /* Contact Section Styling */
     .contact-section { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center; }
     .contact-title { font-size: 15px; font-weight: 700; color: #0b2368; margin-bottom: 14px; }
     .btn-container { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
-    .btn-contact { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; padding: 12px 22px; border-radius: 8px; font-weight: bold; font-size: 14px; transition: all 0.2s; }
-    .btn-whatsapp { background: #25D366; color: white; box-shadow: 0 4px 10px rgba(37, 211, 102, 0.25); }
-    .btn-email { background: #0b2368; color: white; box-shadow: 0 4px 10px rgba(11, 35, 104, 0.25); }
-    .btn-contact:hover { transform: translateY(-1px); opacity: 0.95; }
+    .btn-contact { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; padding: 12px 22px; border-radius: 8px; font-weight: bold; font-size: 14px; }
+    .btn-whatsapp { background: #25D366; color: white; }
+    .btn-email { background: #0b2368; color: white; }
   </style>
 </head>
 <body>
 
-<div class="calc-card">
-  
-  <!-- CourierBird Transparent Image Header -->
-  <div class="brand-header">
-    <img src="https://i.ibb.co/ZzSD1DDc/image.png" alt="CourierBird Logo" class="brand-logo-img">
-    <div class="brand-subtitle">Multi-Carrier Live Shipping Rate Calculator</div>
-  </div>
+<div class="main-wrapper">
+  <!-- Delivery Boy Character Image -->
+  <img src="https://cdni.iconscout.com/illustration/premium/thumb/delivery-man-holding-parcel-box-4318728-3580546.png" alt="Courier Delivery Boy" class="delivery-character">
 
-  <div class="grid">
-    <div class="form-group">
-      <label>Ship From (Origin):</label>
-      <select id="fromCountry">
-        <option value="India">India (IN)</option>
-      </select>
+  <div class="calc-card">
+    <div class="brand-header">
+      <img src="https://i.ibb.co/ZzSD1DDc/image.png" alt="CourierBird Logo" class="brand-logo-img">
+      <div class="brand-subtitle">Multi-Carrier Live Shipping Rate Calculator</div>
     </div>
-    <div class="form-group">
-      <label>Destination Country:</label>
-      <select id="country">
-        <option value="UAE">UAE (United Arab Emirates)</option>
-      </select>
+
+    <div class="grid">
+      <div class="form-group">
+        <label>Ship From (Origin):</label>
+        <select id="fromCountry">
+          <option value="India">India (IN)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Destination Country:</label>
+        <select id="country">
+          <option value="UAE">UAE (United Arab Emirates)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="form-group">
+        <label>No. of Cartons / Boxes:</label>
+        <input type="number" id="cartons" value="1" min="1">
+      </div>
+      <div class="form-group">
+        <label>Gross Weight (KG):</label>
+        <input type="number" id="grossWeight" value="2" step="0.5">
+      </div>
+    </div>
+
+    <label>Single Box Dimensions (cm):</label>
+    <div class="grid">
+      <input type="number" id="length" placeholder="Length" value="5">
+      <input type="number" id="width" placeholder="Width" value="5">
+      <input type="number" id="height" placeholder="Height" value="4">
+    </div>
+
+    <button onclick="calculateLiveRates()">Compare All Live Rates</button>
+    <div class="loader" id="loader">Fetching live rates from Google Sheets... ⏳</div>
+
+    <div class="result-box" id="resultBox" style="display:none;">
+      <div class="vol-info" id="weightSummary"></div>
+      
+      <table class="rate-table">
+        <thead>
+          <tr>
+            <th>Carrier / Sheet Name</th>
+            <th>Route</th>
+            <th>ETA</th>
+            <th>Subtotal</th>
+            <th>GST (18%)</th>
+            <th>Final Total</th>
+          </tr>
+        </thead>
+        <tbody id="comparisonRows"></tbody>
+      </table>
+    </div>
+
+    <div class="contact-section">
+      <div class="contact-title">Have Questions or Want to Book a Shipment?</div>
+      <div class="btn-container">
+        <a href="https://wa.me/917723837272?text=Hi%20CourierBird,%20I%20want%20to%20book%20a%20shipment%20/%20have%20a%20query." target="_blank" class="btn-contact btn-whatsapp">
+          💬 Chat on WhatsApp (+91 77238 37272)
+        </a>
+        <a href="mailto:courierbirdshipping@gmail.com?subject=International%20Shipping%20Inquiry" class="btn-contact btn-email">
+          ✉️ Email Support
+        </a>
+      </div>
     </div>
   </div>
-
-  <div class="grid">
-    <div class="form-group">
-      <label>No. of Cartons / Boxes:</label>
-      <input type="number" id="cartons" value="1" min="1">
-    </div>
-    <div class="form-group">
-      <label>Gross Weight (KG):</label>
-      <input type="number" id="grossWeight" value="2" step="0.5">
-    </div>
-  </div>
-
-  <label>Single Box Dimensions (cm):</label>
-  <div class="grid">
-    <input type="number" id="length" placeholder="Length" value="5">
-    <input type="number" id="width" placeholder="Width" value="5">
-    <input type="number" id="height" placeholder="Height" value="4">
-  </div>
-
-  <button onclick="calculateLiveRates()">Compare All Live Rates</button>
-  <div class="loader" id="loader">Fetching live rates from Google Sheets... ⏳</div>
-
-  <div class="result-box" id="resultBox" style="display:none;">
-    <div class="vol-info" id="weightSummary"></div>
-    
-    <table class="rate-table">
-      <thead>
-        <tr>
-          <th>Carrier / Sheet Name</th>
-          <th>Route</th>
-          <th>ETA</th>
-          <th>Subtotal</th>
-          <th>GST (18%)</th>
-          <th>Final Total</th>
-        </tr>
-      </thead>
-      <tbody id="comparisonRows">
-        <!-- Live Google Sheet Data -->
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Contact Us Section -->
-  <div class="contact-section">
-    <div class="contact-title">Have Questions or Want to Book a Shipment?</div>
-    <div class="btn-container">
-      <a href="https://wa.me/917723837272?text=Hi%20CourierBird,%20I%20want%20to%20book%20a%20shipment%20/%20have%20a%20query." target="_blank" class="btn-contact btn-whatsapp">
-        💬 Chat on WhatsApp (+91 77238 37272)
-      </a>
-      <a href="mailto:courierbirdshipping@gmail.com?subject=International%20Shipping%20Inquiry" class="btn-contact btn-email">
-        ✉️ Email Support
-      </a>
-    </div>
-  </div>
-
 </div>
 
 <script>
