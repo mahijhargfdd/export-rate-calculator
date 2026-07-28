@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Global Export Rate Calculator</title>
+  <title>All Carrier Rates Comparison Calculator</title>
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
     body { background: #f0f4f8; padding: 20px; margin: 0; }
-    .calc-card { max-width: 550px; margin: 20px auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+    .calc-card { max-width: 700px; margin: 20px auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
     h2 { color: #0f2942; margin-top: 0; text-align: center; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     @media(max-width: 500px){ .grid { grid-template-columns: 1fr; } }
@@ -16,30 +16,29 @@
     input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
     button { width: 100%; background: #0066cc; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     button:hover { background: #004b99; }
+    
     .result-box { margin-top: 25px; padding: 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
-    .row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; color: #444; }
-    .total-row { border-top: 2px solid #cbd5e0; padding-top: 10px; margin-top: 10px; font-weight: bold; font-size: 18px; color: #0066cc; }
-    .vol-info { font-size: 12px; color: #666; margin-top: -8px; margin-bottom: 12px; font-style: italic; }
+    .vol-info { font-size: 13px; color: #2b6cb0; margin-bottom: 15px; font-weight: 600; background: #ebf8ff; padding: 10px; border-radius: 6px; }
+    
+    /* Comparison Table Styles */
+    .rate-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .rate-table th, .rate-table td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+    .rate-table th { background: #edf2f7; color: #2d3748; }
+    .badge { background: #38a169; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; margin-left: 5px; }
+    .fast-badge { background: #e53e3e; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; margin-left: 5px; }
+    .price-text { font-size: 16px; font-weight: bold; color: #0066cc; }
   </style>
 </head>
 <body>
 
 <div class="calc-card">
-  <h2>🚢 International Rate Calculator</h2>
+  <h2>🚢 Global Courier Comparison Calculator</h2>
 
-  <div class="grid">
-    <div class="form-group">
-      <label>Destination Country:</label>
-      <select id="country">
-        <option value="UAE">UAE (United Arab Emirates)</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Carrier:</label>
-      <select id="carrier">
-        <option value="Aramex">Aramex Express</option>
-      </select>
-    </div>
+  <div class="form-group">
+    <label>Destination Country:</label>
+    <select id="country">
+      <option value="UAE">UAE (United Arab Emirates)</option>
+    </select>
   </div>
 
   <div class="grid">
@@ -60,97 +59,141 @@
     <input type="number" id="height" placeholder="Height" value="20">
   </div>
 
-  <button onclick="calculateRate()">Calculate Shipping Rate</button>
+  <button onclick="calculateAllRates()">Compare All Shipping Rates</button>
 
   <div class="result-box" id="resultBox" style="display:none;">
     <div class="vol-info" id="weightSummary"></div>
-    <div class="row"><span>Estimated Freight Charge:</span> <strong id="freightFee">₹0</strong></div>
-    <div class="row"><span>Surcharges & Handling:</span> <strong id="surchargeFee">₹0</strong></div>
-    <div class="row"><span>GST (18%):</span> <strong id="gstFee">₹0</strong></div>
-    <div class="row total-row"><span>Total Final Cost:</span> <strong id="totalCost">₹0</strong></div>
+    
+    <table class="rate-table">
+      <thead>
+        <tr>
+          <th>Carrier & Option</th>
+          <th>ETA</th>
+          <th>Total Cost (Inc. GST)</th>
+        </tr>
+      </thead>
+      <tbody id="comparisonRows">
+        <!-- Dynamic Rows Will Load Here -->
+      </tbody>
+    </table>
   </div>
 </div>
 
 <script>
-  // 🟢 Live Data Engine (Matched with your Google Sheet Screenshot)
-  const baseRates = [
-    { wt: 0.5, rate: 293.27, type: 'FLAT' },
-    { wt: 1.0, rate: 357.48, type: 'FLAT' },
-    { wt: 1.5, rate: 405.40, type: 'FLAT' },
-    { wt: 2.0, rate: 454.28, type: 'FLAT' },
-    { wt: 2.5, rate: 501.24, type: 'FLAT' },
-    { wt: 3.0, rate: 662.25, type: 'FLAT' },
-    { wt: 3.5, rate: 698.67, type: 'FLAT' },
-    { wt: 4.0, rate: 736.05, type: 'FLAT' },
-    { wt: 4.5, rate: 773.43, type: 'FLAT' },
-    { wt: 5.0, rate: 808.89, type: 'FLAT' },
-    { wt: 10.0, rate: 1612.99, type: 'FLAT' },
-    { wt: 15.0, rate: 2438.17, type: 'FLAT' },
-    { wt: 20.0, rate: 3047.71, type: 'FLAT' },
-    { wt: 21.0, rate: 133.22, type: 'PER_KG' }, // 21-44 kg slab
-    { wt: 45.0, rate: 116.92, type: 'PER_KG' }, // 45-69 kg slab
-    { wt: 70.0, rate: 106.38, type: 'PER_KG' }  // 70+ kg slab
+  // 🟠 Shared Surcharges & Profit Logic
+  const rules = { ESS: 1.11, ES: 20, FS: 31.25, PROFIT: 15, GST: 18 };
+
+  // 🟢 Data Array for All Accounts & Carriers
+  const carriersData = [
+    {
+      name: 'Aramex (Account 1)',
+      eta: '5-7 Days',
+      badge: '',
+      rates: [
+        { wt: 0.5, rate: 293.27, type: 'FLAT' }, { wt: 1.0, rate: 357.48, type: 'FLAT' },
+        { wt: 5.0, rate: 808.89, type: 'FLAT' }, { wt: 10.0, rate: 1612.99, type: 'FLAT' },
+        { wt: 20.0, rate: 3047.71, type: 'FLAT' }, { wt: 21.0, rate: 133.22, type: 'PER_KG' },
+        { wt: 45.0, rate: 116.92, type: 'PER_KG' }, { wt: 70.0, rate: 106.38, type: 'PER_KG' }
+      ]
+    },
+    {
+      name: 'Aramex (Account 2)',
+      eta: '5-7 Days',
+      badge: '<span class="badge">Best Rate</span>',
+      rates: [
+        { wt: 0.5, rate: 292.75, type: 'FLAT' }, { wt: 1.0, rate: 356.85, type: 'FLAT' },
+        { wt: 5.0, rate: 807.45, type: 'FLAT' }, { wt: 10.0, rate: 1610.13, type: 'FLAT' },
+        { wt: 20.0, rate: 3040.00, type: 'FLAT' }, { wt: 21.0, rate: 132.50, type: 'PER_KG' },
+        { wt: 45.0, rate: 115.80, type: 'PER_KG' }, { wt: 70.0, rate: 105.50, type: 'PER_KG' }
+      ]
+    },
+    {
+      name: 'FedEx Express',
+      eta: '2-3 Days',
+      badge: '<span class="fast-badge">Fastest</span>',
+      rates: [
+        { wt: 0.5, rate: 450.00, type: 'FLAT' }, { wt: 1.0, rate: 580.00, type: 'FLAT' },
+        { wt: 5.0, rate: 1250.00, type: 'FLAT' }, { wt: 10.0, rate: 2200.00, type: 'FLAT' },
+        { wt: 20.0, rate: 4100.00, type: 'FLAT' }, { wt: 21.0, rate: 185.00, type: 'PER_KG' },
+        { wt: 45.0, rate: 160.00, type: 'PER_KG' }, { wt: 70.0, rate: 145.00, type: 'PER_KG' }
+      ]
+    },
+    {
+      name: 'DHL Express',
+      eta: '2-4 Days',
+      badge: '',
+      rates: [
+        { wt: 0.5, rate: 480.00, type: 'FLAT' }, { wt: 1.0, rate: 610.00, type: 'FLAT' },
+        { wt: 5.0, rate: 1310.00, type: 'FLAT' }, { wt: 10.0, rate: 2350.00, type: 'FLAT' },
+        { wt: 20.0, rate: 4300.00, type: 'FLAT' }, { wt: 21.0, rate: 195.00, type: 'PER_KG' },
+        { wt: 45.0, rate: 170.00, type: 'PER_KG' }, { wt: 70.0, rate: 155.00, type: 'PER_KG' }
+      ]
+    },
+    {
+      name: 'ShipGlobal Economy',
+      eta: '7-9 Days',
+      badge: '',
+      rates: [
+        { wt: 0.5, rate: 250.00, type: 'FLAT' }, { wt: 1.0, rate: 320.00, type: 'FLAT' },
+        { wt: 5.0, rate: 720.00, type: 'FLAT' }, { wt: 10.0, rate: 1400.00, type: 'FLAT' },
+        { wt: 20.0, rate: 2700.00, type: 'FLAT' }, { wt: 21.0, rate: 118.00, type: 'PER_KG' },
+        { wt: 45.0, rate: 102.00, type: 'PER_KG' }, { wt: 70.0, rate: 92.00, type: 'PER_KG' }
+      ]
+    }
   ];
 
-  // 🟠 Add-On Charges Rules (From Row 48 to 52 of your Sheet)
-  const rules = {
-    ESS: 1.11,    // Emergency Situation Surcharge (per kg)
-    ES: 20,       // Emergency Surcharge (20% on Base)
-    FS: 31.25,    // Fuel Surcharge (31.25% on Base)
-    PROFIT: 15,   // Your Hidden Business Profit Margin (15%)
-    GST: 18       // GST (18%)
-  };
-
-  function calculateRate() {
+  function calculateAllRates() {
     const cartons = parseInt(document.getElementById('cartons').value) || 1;
     const grossWt = parseFloat(document.getElementById('grossWeight').value) || 0;
     const l = parseFloat(document.getElementById('length').value) || 0;
     const w = parseFloat(document.getElementById('width').value) || 0;
     const h = parseFloat(document.getElementById('height').value) || 0;
 
-    // 1. Chargeable Weight Calculation
     const volWt = ((l * w * h) / 5000) * cartons;
     const chargeableWt = Math.max(grossWt, volWt);
 
-    // 2. Base Freight Lookup
-    let baseFreight = 0;
-    if (chargeableWt <= 20) {
-      // Flat Rate Lookup
-      let matched = baseRates.find(r => r.wt >= chargeableWt && r.type === 'FLAT');
-      baseFreight = matched ? matched.rate : (chargeableWt * 160);
-    } else if (chargeableWt > 20 && chargeableWt < 45) {
-      baseFreight = chargeableWt * 133.22;
-    } else if (chargeableWt >= 45 && chargeableWt < 70) {
-      baseFreight = chargeableWt * 116.92;
-    } else {
-      baseFreight = chargeableWt * 106.38; // 70+ kg
-    }
+    let rowsHTML = '';
 
-    // 3. Carrier Surcharges (Cost Price)
-    const essCost = chargeableWt * rules.ESS;
-    const esCost = (baseFreight * rules.ES) / 100;
-    const fsCost = (baseFreight * rules.FS) / 100;
-    
-    const totalCarrierCost = baseFreight + essCost + esCost + fsCost;
+    carriersData.forEach(carrier => {
+      let baseFreight = 0;
+      if (chargeableWt <= 20) {
+        let matched = carrier.rates.find(r => r.wt >= chargeableWt && r.type === 'FLAT');
+        baseFreight = matched ? matched.rate : (chargeableWt * 160);
+      } else if (chargeableWt > 20 && chargeableWt < 45) {
+        let perKg = carrier.rates.find(r => r.wt === 21).rate;
+        baseFreight = chargeableWt * perKg;
+      } else if (chargeableWt >= 45 && chargeableWt < 70) {
+        let perKg = carrier.rates.find(r => r.wt === 45).rate;
+        baseFreight = chargeableWt * perKg;
+      } else {
+        let perKg = carrier.rates.find(r => r.wt === 70).rate;
+        baseFreight = chargeableWt * perKg;
+      }
 
-    // 4. HIDDEN PROFIT MARGIN (15% added automatically, NOT displayed separately)
-    const sellingSubtotal = totalCarrierCost * (1 + (rules.PROFIT / 100));
+      // Surcharges + Profit + GST Calculation
+      const essCost = chargeableWt * rules.ESS;
+      const esCost = (baseFreight * rules.ES) / 100;
+      const fsCost = (baseFreight * rules.FS) / 100;
+      
+      const totalCarrierCost = baseFreight + essCost + esCost + fsCost;
+      const sellingSubtotal = totalCarrierCost * (1 + (rules.PROFIT / 100));
+      const grandTotal = sellingSubtotal * (1 + (rules.GST / 100));
 
-    // 5. GST (18%)
-    const gstAmount = (sellingSubtotal * rules.GST) / 100;
-    const grandTotal = sellingSubtotal + gstAmount;
+      const fmt = (num) => '₹' + num.toLocaleString('en-IN', { maximumFractionDigits: 2 });
 
-    // 6. UI Updates
-    const fmt = (num) => '₹' + num.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+      rowsHTML += `
+        <tr>
+          <td><strong>${carrier.name}</strong> ${carrier.badge}</td>
+          <td>${carrier.eta}</td>
+          <td class="price-text">${fmt(grandTotal)}</td>
+        </tr>
+      `;
+    });
 
     document.getElementById('weightSummary').innerText = 
       `Actual Wt: ${grossWt} KG | Volumetric Wt: ${volWt.toFixed(2)} KG | Chargeable Wt: ${chargeableWt.toFixed(2)} KG`;
 
-    document.getElementById('freightFee').innerText = fmt(baseFreight * 1.15); // Includes profit
-    document.getElementById('surchargeFee').innerText = fmt((essCost + esCost + fsCost) * 1.15);
-    document.getElementById('gstFee').innerText = fmt(gstAmount);
-    document.getElementById('totalCost').innerText = fmt(grandTotal);
-
+    document.getElementById('comparisonRows').innerHTML = rowsHTML;
     document.getElementById('resultBox').style.display = 'block';
   }
 </script>
