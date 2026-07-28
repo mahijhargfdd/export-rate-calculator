@@ -16,49 +16,69 @@
       align-items: center;
       justify-content: center;
       position: relative;
-      overflow-x: hidden;
     }
 
-    /* Main Container with Delivery Character */
     .main-wrapper {
       display: flex;
-      align-items: center;
+      align-items: flex-end;
       justify-content: center;
-      max-width: 1100px;
+      max-width: 1000px;
       width: 100%;
       position: relative;
     }
 
-    /* Delivery Guy Character Styling */
+    /* Fixed Working Delivery Character Graphic */
     .delivery-character {
-      width: 280px;
+      width: 220px;
       height: auto;
       position: absolute;
-      left: -200px;
-      bottom: -20px;
+      left: -190px;
+      bottom: 0px;
       z-index: 20;
-      filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.4));
+      filter: drop-shadow(0px 10px 20px rgba(0,0,0,0.5));
     }
 
-    @media(max-width: 1024px) {
-      .delivery-character { display: none; } /* Mobile/Tablet par hide/adjust */
+    @media(max-width: 1100px) {
+      .delivery-character { display: none; }
     }
 
     .calc-card { 
       width: 100%;
-      max-width: 900px; 
       background: #ffffff; 
       padding: 35px 40px; 
       border-radius: 16px; 
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25); 
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); 
       position: relative;
       z-index: 10;
-      border: 1px solid rgba(255, 255, 255, 0.2);
     }
     
-    .brand-header { text-align: center; margin-bottom: 25px; }
+    .brand-header { text-align: center; margin-bottom: 20px; }
     .brand-logo-img { max-width: 260px; height: auto; display: block; margin: 0 auto 8px auto; }
     .brand-subtitle { color: #64748b; font-size: 15px; font-weight: 600; }
+
+    /* Trust Features Bar */
+    .trust-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      background: #f1f5f9;
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 25px;
+      text-align: center;
+    }
+    .trust-item {
+      font-size: 12px;
+      font-weight: 700;
+      color: #0b2368;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    @media(max-width: 650px){ 
+      .trust-bar { grid-template-columns: 1fr 1fr; gap: 8px; } 
+    }
     
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
     @media(max-width: 600px){ 
@@ -77,6 +97,7 @@
       color: #0f172a;
       outline: none;
       background: #f8fafc;
+      transition: all 0.2s;
     }
 
     input:focus, select:focus {
@@ -97,6 +118,11 @@
       cursor: pointer; 
       margin-top: 10px; 
       box-shadow: 0 4px 12px rgba(255, 102, 0, 0.3);
+      transition: all 0.2s;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(255, 102, 0, 0.4);
     }
     
     .result-box { margin-top: 25px; padding: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; }
@@ -112,21 +138,43 @@
     .contact-section { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center; }
     .contact-title { font-size: 15px; font-weight: 700; color: #0b2368; margin-bottom: 14px; }
     .btn-container { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
-    .btn-contact { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; padding: 12px 22px; border-radius: 8px; font-weight: bold; font-size: 14px; }
-    .btn-whatsapp { background: #25D366; color: white; }
-    .btn-email { background: #0b2368; color: white; }
+    .btn-contact { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; padding: 12px 22px; border-radius: 8px; font-weight: bold; font-size: 14px; transition: all 0.2s; }
+    .btn-whatsapp { background: #25D366; color: white; box-shadow: 0 4px 10px rgba(37, 211, 102, 0.25); }
+    .btn-email { background: #0b2368; color: white; box-shadow: 0 4px 10px rgba(11, 35, 104, 0.25); }
+    .btn-contact:hover { transform: translateY(-1px); opacity: 0.95; }
   </style>
 </head>
 <body>
 
 <div class="main-wrapper">
-  <!-- Delivery Boy Character Image -->
-  <img src="https://cdni.iconscout.com/illustration/premium/thumb/delivery-man-holding-parcel-box-4318728-3580546.png" alt="Courier Delivery Boy" class="delivery-character">
+  <!-- Working Transparent Delivery SVG Graphic -->
+  <svg class="delivery-character" viewBox="0 0 200 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Courier Person Vector Art -->
+    <path d="M70 60 C70 45 85 30 100 30 C115 30 130 45 130 60 C130 75 115 85 100 85 C85 85 70 75 70 60 Z" fill="#ff6600"/>
+    <path d="M60 40 C70 25 100 20 140 35 L125 45 Z" fill="#0b2368"/>
+    <circle cx="100" cy="60" r="22" fill="#ffdbac"/>
+    <path d="M50 100 C50 85 70 85 100 85 C130 85 150 85 150 100 L160 210 H40 Z" fill="#ff6600"/>
+    <!-- Parcel Box -->
+    <rect x="55" y="120" width="90" height="70" rx="6" fill="#d9a05b" stroke="#8b5a2b" stroke-width="3"/>
+    <line x1="100" y1="120" x2="100" y2="190" stroke="#8b5a2b" stroke-width="3"/>
+    <path d="M40 210 L30 290 H80 L70 210 Z" fill="#0b2368"/>
+    <path d="M160 210 L170 290 H120 L130 210 Z" fill="#0b2368"/>
+  </svg>
 
   <div class="calc-card">
+    
+    <!-- CourierBird Header -->
     <div class="brand-header">
       <img src="https://i.ibb.co/ZzSD1DDc/image.png" alt="CourierBird Logo" class="brand-logo-img">
       <div class="brand-subtitle">Multi-Carrier Live Shipping Rate Calculator</div>
+    </div>
+
+    <!-- Professional Trust Badges Bar -->
+    <div class="trust-bar">
+      <div class="trust-item">📦 Doorstep Pickup</div>
+      <div class="trust-item">⚡ Live Sync Rates</div>
+      <div class="trust-item">🛡️ Safe & Insured</div>
+      <div class="trust-item">✈️ Express Clearance</div>
     </div>
 
     <div class="grid">
