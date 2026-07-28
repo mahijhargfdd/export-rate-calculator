@@ -3,253 +3,259 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CourierBird - Live Shipping Calculator</title>
+  <title>CourierBird - Enterprise Shipping Rate Calculator</title>
+  <!-- Google Fonts & FontAwesome Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
   <style>
-    * { box-sizing: border-box; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; }
+    * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
     
     body { 
-      background: linear-gradient(135deg, #0b2368 0%, #1e3c72 50%, #2a5298 100%);
+      background: radial-gradient(circle at 50% 0%, #1e3a8a 0%, #0f172a 100%);
       min-height: 100vh;
       padding: 40px 20px; 
       margin: 0; 
       display: flex;
       align-items: center;
       justify-content: center;
-      position: relative;
-    }
-
-    .main-wrapper {
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      max-width: 1000px;
-      width: 100%;
-      position: relative;
-    }
-
-    /* Proper HD Delivery Person PNG */
-    .delivery-character {
-      width: 240px;
-      height: auto;
-      position: absolute;
-      left: -210px;
-      bottom: -10px;
-      z-index: 20;
-      filter: drop-shadow(0px 10px 20px rgba(0,0,0,0.4));
-    }
-
-    @media(max-width: 1150px) {
-      .delivery-character { display: none; }
     }
 
     .calc-card { 
       width: 100%;
+      max-width: 900px; 
       background: #ffffff; 
-      padding: 35px 40px; 
-      border-radius: 16px; 
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); 
-      position: relative;
-      z-index: 10;
+      padding: 40px; 
+      border-radius: 20px; 
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35); 
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
     
-    .brand-header { text-align: center; margin-bottom: 20px; }
-    .brand-logo-img { max-width: 260px; height: auto; display: block; margin: 0 auto 8px auto; }
-    .brand-subtitle { color: #64748b; font-size: 15px; font-weight: 600; }
+    /* Pure Vector Brand Header */
+    .brand-header { text-align: center; margin-bottom: 25px; }
+    .brand-logo-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+    .brand-title-text {
+      font-size: 32px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+    }
+    .brand-title-text span { color: #f97316; }
+    .brand-subtitle { color: #64748b; font-size: 14px; font-weight: 600; }
 
-    /* Trust Features Bar */
+    /* Modern Trust Bar */
     .trust-bar {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      background: #f1f5f9;
-      padding: 12px;
-      border-radius: 10px;
-      margin-bottom: 25px;
-      text-align: center;
+      gap: 12px;
+      background: #f8fafc;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      margin-bottom: 30px;
     }
     .trust-item {
       font-size: 12px;
       font-weight: 700;
-      color: #0b2368;
+      color: #1e293b;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 8px;
     }
+    .trust-item i { color: #f97316; font-size: 14px; }
+    
     @media(max-width: 650px){ 
-      .trust-bar { grid-template-columns: 1fr 1fr; gap: 8px; } 
+      .trust-bar { grid-template-columns: 1fr 1fr; gap: 10px; } 
+      .calc-card { padding: 25px 20px; }
     }
     
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-    @media(max-width: 600px){ 
-      .grid { grid-template-columns: 1fr; } 
-      .calc-card { padding: 25px 20px; }
+    @media(max-width: 600px){ .grid { grid-template-columns: 1fr; } }
+    
+    .form-group { margin-bottom: 18px; }
+    label { 
+      display: block; 
+      font-weight: 700; 
+      font-size: 12px; 
+      color: #334155; 
+      margin-bottom: 8px; 
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
-    .form-group { margin-bottom: 15px; }
-    label { display: block; font-weight: 600; font-size: 13px; color: #1e293b; margin-bottom: 6px; }
     
     input, select { 
       width: 100%; 
-      padding: 12px 14px; 
+      padding: 13px 16px; 
       border: 1.5px solid #cbd5e1; 
-      border-radius: 8px; 
+      border-radius: 10px; 
       font-size: 14px; 
+      font-weight: 600;
       color: #0f172a;
       outline: none;
-      background: #f8fafc;
+      background: #ffffff;
       transition: all 0.2s;
     }
 
     input:focus, select:focus {
-      border-color: #ff6600;
-      background: #ffffff;
-      box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.15);
+      border-color: #f97316;
+      box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.12);
     }
     
     button { 
       width: 100%; 
-      background: linear-gradient(135deg, #ff6600 0%, #e05500 100%); 
+      background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); 
       color: white; 
       border: none; 
-      padding: 15px; 
-      border-radius: 8px; 
+      padding: 16px; 
+      border-radius: 10px; 
       font-size: 16px; 
-      font-weight: 700; 
+      font-weight: 800; 
       cursor: pointer; 
       margin-top: 10px; 
-      box-shadow: 0 4px 12px rgba(255, 102, 0, 0.3);
+      box-shadow: 0 10px 20px -5px rgba(249, 115, 22, 0.4);
       transition: all 0.2s;
     }
     button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 16px rgba(255, 102, 0, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px -5px rgba(249, 115, 22, 0.5);
     }
     
-    .result-box { margin-top: 25px; padding: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; }
-    .vol-info { font-size: 13px; color: #0b2368; margin-bottom: 15px; font-weight: 600; background: #eef3ff; padding: 12px; border-radius: 8px; border-left: 4px solid #ff6600; }
+    .result-box { margin-top: 30px; padding: 22px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; }
+    .vol-info { font-size: 13px; color: #1e3a8a; margin-bottom: 18px; font-weight: 700; background: #eff6ff; padding: 12px 16px; border-radius: 8px; border-left: 4px solid #f97316; }
     
-    .rate-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    .rate-table th, .rate-table td { padding: 14px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
-    .rate-table th { background: #0b2368; color: #ffffff; }
-    .price-text { font-size: 16px; font-weight: bold; color: #ff6600; }
-    .badge { background: #38a169; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; margin-left: 5px; }
-    .loader { display: none; text-align: center; color: #0b2368; font-weight: bold; margin-top: 15px; }
+    .rate-table { width: 100%; border-collapse: collapse; margin-top: 10px; overflow: hidden; border-radius: 8px; }
+    .rate-table th, .rate-table td { padding: 14px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+    .rate-table th { background: #0f172a; color: #ffffff; font-weight: 700; font-size: 13px; text-transform: uppercase; }
+    .price-text { font-size: 16px; font-weight: 800; color: #ea580c; }
+    .badge { background: #16a34a; color: white; padding: 4px 8px; border-radius: 20px; font-size: 11px; margin-left: 6px; font-weight: 700; }
+    .loader { display: none; text-align: center; color: #0f172a; font-weight: 700; margin-top: 20px; }
 
-    /* Partners Logo Section */
-    .partner-section { margin-top: 25px; text-align: center; }
-    .partner-title { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
-    .partner-badges { display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap; opacity: 0.85; }
-    .partner-badge { background: #f8fafc; border: 1px solid #e2e8f0; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 800; color: #0b2368; }
+    /* Partner Logos styling */
+    .partner-section { margin-top: 30px; text-align: center; }
+    .partner-title { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px; }
+    .partner-badges { display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .partner-badge { background: #ffffff; border: 1px solid #e2e8f0; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 800; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
 
     /* Contact Section Styling */
-    .contact-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center; }
-    .contact-title { font-size: 15px; font-weight: 700; color: #0b2368; margin-bottom: 14px; }
-    .btn-container { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
-    .btn-contact { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; padding: 12px 22px; border-radius: 8px; font-weight: bold; font-size: 14px; transition: all 0.2s; }
-    .btn-whatsapp { background: #25D366; color: white; box-shadow: 0 4px 10px rgba(37, 211, 102, 0.25); }
-    .btn-email { background: #0b2368; color: white; box-shadow: 0 4px 10px rgba(11, 35, 104, 0.25); }
-    .btn-contact:hover { transform: translateY(-1px); opacity: 0.95; }
+    .contact-section { margin-top: 25px; padding-top: 25px; border-top: 1px solid #e2e8f0; text-align: center; }
+    .contact-title { font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 16px; }
+    .btn-container { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+    .btn-contact { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 700; font-size: 14px; transition: all 0.2s; }
+    .btn-whatsapp { background: #25D366; color: white; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.25); }
+    .btn-email { background: #0f172a; color: white; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25); }
+    .btn-contact:hover { transform: translateY(-2px); opacity: 0.95; }
   </style>
 </head>
 <body>
 
-<div class="main-wrapper">
-  <!-- Clean PNG Delivery Boy Character -->
-  <img src="https://i.ibb.co/VMy4v2p/delivery-guy.png" alt="Courier Delivery Character" class="delivery-character" onerror="this.style.display='none'">
-
-  <div class="calc-card">
-    
-    <!-- CourierBird Header -->
-    <div class="brand-header">
-      <img src="https://i.ibb.co/ZzSD1DDc/image.png" alt="CourierBird Logo" class="brand-logo-img">
-      <div class="brand-subtitle">Multi-Carrier Live Shipping Rate Calculator</div>
+<div class="calc-card">
+  
+  <!-- CourierBird High-Res Vector Header -->
+  <div class="brand-header">
+    <div class="brand-logo-wrap">
+      <svg width="42" height="42" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100" height="100" rx="20" fill="#0F172A"/>
+        <path d="M20 35 H60 L45 65 H20 Z" fill="#F97316"/>
+        <path d="M65 35 L80 50 L65 65 Z" fill="#F97316"/>
+        <circle cx="35" cy="72" r="7" fill="#FFFFFF"/>
+        <circle cx="65" cy="72" r="7" fill="#FFFFFF"/>
+      </svg>
+      <div class="brand-title-text">COURIER<span>BIRD</span></div>
     </div>
+    <div class="brand-subtitle">Multi-Carrier Live Shipping Rate Calculator</div>
+  </div>
 
-    <!-- Professional Trust Badges Bar -->
-    <div class="trust-bar">
-      <div class="trust-item">📦 Doorstep Pickup</div>
-      <div class="trust-item">⚡ Live Sync Rates</div>
-      <div class="trust-item">🛡️ Safe & Insured</div>
-      <div class="trust-item">✈️ Express Clearance</div>
+  <!-- Trust Bar with Icons -->
+  <div class="trust-bar">
+    <div class="trust-item"><i class="fa-solid fa-truck-ramp-box"></i> Doorstep Pickup</div>
+    <div class="trust-item"><i class="fa-solid fa-rotate"></i> Live Sync Rates</div>
+    <div class="trust-item"><i class="fa-solid fa-shield-halved"></i> Safe & Insured</div>
+    <div class="trust-item"><i class="fa-solid fa-plane-departure"></i> Express Clearance</div>
+  </div>
+
+  <div class="grid">
+    <div class="form-group">
+      <label>Ship From (Origin)</label>
+      <select id="fromCountry">
+        <option value="India">India (IN)</option>
+      </select>
     </div>
-
-    <div class="grid">
-      <div class="form-group">
-        <label>Ship From (Origin):</label>
-        <select id="fromCountry">
-          <option value="India">India (IN)</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Destination Country:</label>
-        <select id="country">
-          <option value="UAE">UAE (United Arab Emirates)</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="grid">
-      <div class="form-group">
-        <label>No. of Cartons / Boxes:</label>
-        <input type="number" id="cartons" value="1" min="1">
-      </div>
-      <div class="form-group">
-        <label>Gross Weight (KG):</label>
-        <input type="number" id="grossWeight" value="2" step="0.5">
-      </div>
-    </div>
-
-    <label>Single Box Dimensions (cm):</label>
-    <div class="grid">
-      <input type="number" id="length" placeholder="Length" value="5">
-      <input type="number" id="width" placeholder="Width" value="5">
-      <input type="number" id="height" placeholder="Height" value="4">
-    </div>
-
-    <button onclick="calculateLiveRates()">Compare All Live Rates</button>
-    <div class="loader" id="loader">Fetching live rates from Google Sheets... ⏳</div>
-
-    <div class="result-box" id="resultBox" style="display:none;">
-      <div class="vol-info" id="weightSummary"></div>
-      
-      <table class="rate-table">
-        <thead>
-          <tr>
-            <th>Carrier / Sheet Name</th>
-            <th>Route</th>
-            <th>ETA</th>
-            <th>Subtotal</th>
-            <th>GST (18%)</th>
-            <th>Final Total</th>
-          </tr>
-        </thead>
-        <tbody id="comparisonRows"></tbody>
-      </table>
-    </div>
-
-    <!-- Carrier Trust Logos -->
-    <div class="partner-section">
-      <div class="partner-title">Official Logistics Network Partners</div>
-      <div class="partner-badges">
-        <span class="partner-badge" style="color:#d40511;">DHL Express</span>
-        <span class="partner-badge" style="color:#e50012;">Aramex</span>
-        <span class="partner-badge" style="color:#4d148c;">FedEx</span>
-        <span class="partner-badge" style="color:#0066cc;">ShipGlobal</span>
-      </div>
-    </div>
-
-    <div class="contact-section">
-      <div class="contact-title">Have Questions or Want to Book a Shipment?</div>
-      <div class="btn-container">
-        <a href="https://wa.me/917723837272?text=Hi%20CourierBird,%20I%20want%20to%20book%20a%20shipment%20/%20have%20a%20query." target="_blank" class="btn-contact btn-whatsapp">
-          💬 Chat on WhatsApp (+91 77238 37272)
-        </a>
-        <a href="mailto:courierbirdshipping@gmail.com?subject=International%20Shipping%20Inquiry" class="btn-contact btn-email">
-          ✉️ Email Support
-        </a>
-      </div>
+    <div class="form-group">
+      <label>Destination Country</label>
+      <select id="country">
+        <option value="UAE">UAE (United Arab Emirates)</option>
+      </select>
     </div>
   </div>
+
+  <div class="grid">
+    <div class="form-group">
+      <label>No. of Cartons / Boxes</label>
+      <input type="number" id="cartons" value="1" min="1">
+    </div>
+    <div class="form-group">
+      <label>Gross Weight (KG)</label>
+      <input type="number" id="grossWeight" value="2" step="0.5">
+    </div>
+  </div>
+
+  <label>Single Box Dimensions (CM)</label>
+  <div class="grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 10px;">
+    <input type="number" id="length" placeholder="Length" value="5">
+    <input type="number" id="width" placeholder="Width" value="5">
+    <input type="number" id="height" placeholder="Height" value="4">
+  </div>
+
+  <button onclick="calculateLiveRates()"><i class="fa-solid fa-calculator" style="margin-right: 8px;"></i> Compare All Live Rates</button>
+  <div class="loader" id="loader"><i class="fa-solid fa-spinner fa-spin"></i> Fetching live rates from Google Sheets...</div>
+
+  <div class="result-box" id="resultBox" style="display:none;">
+    <div class="vol-info" id="weightSummary"></div>
+    
+    <table class="rate-table">
+      <thead>
+        <tr>
+          <th>Carrier / Partner</th>
+          <th>Route</th>
+          <th>ETA</th>
+          <th>Subtotal</th>
+          <th>GST (18%)</th>
+          <th>Final Total</th>
+        </tr>
+      </thead>
+      <tbody id="comparisonRows"></tbody>
+    </table>
+  </div>
+
+  <!-- Carrier Logos -->
+  <div class="partner-section">
+    <div class="partner-title">Official Logistics Network Partners</div>
+    <div class="partner-badges">
+      <span class="partner-badge" style="color:#d40511;"><i class="fa-solid fa-plane"></i> DHL Express</span>
+      <span class="partner-badge" style="color:#e50012;"><i class="fa-solid fa-box"></i> Aramex</span>
+      <span class="partner-badge" style="color:#4d148c;"><i class="fa-solid fa-truck-fast"></i> FedEx</span>
+      <span class="partner-badge" style="color:#0284c7;"><i class="fa-solid fa-globe"></i> ShipGlobal</span>
+    </div>
+  </div>
+
+  <div class="contact-section">
+    <div class="contact-title">Have Questions or Want to Book a Shipment?</div>
+    <div class="btn-container">
+      <a href="https://wa.me/917723837272?text=Hi%20CourierBird,%20I%20want%20to%20book%20a%20shipment%20/%20have%20a%20query." target="_blank" class="btn-contact btn-whatsapp">
+        <i class="fa-brands fa-whatsapp" style="font-size: 18px;"></i> Chat on WhatsApp (+91 77238 37272)
+      </a>
+      <a href="mailto:courierbirdshipping@gmail.com?subject=International%20Shipping%20Inquiry" class="btn-contact btn-email">
+        <i class="fa-regular fa-envelope" style="font-size: 16px;"></i> Email Support
+      </a>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -393,11 +399,11 @@
 
       rowsHTML += `
         <tr>
-          <td><strong>${acc.name}</strong> <span class="badge">Live Sync</span></td>
+          <td><strong>${acc.name}</strong> <span class="badge">Live</span></td>
           <td>${fromCountry} ➔ ${toCountry}</td>
           <td>${acc.eta}</td>
           <td>${fmt(sellingSubtotal)}</td>
-          <td style="color: #e53e3e; font-weight: 600;">+ ${fmt(gstAmount)}</td>
+          <td style="color: #dc2626; font-weight: 700;">+ ${fmt(gstAmount)}</td>
           <td class="price-text">${fmt(grandTotal)}</td>
         </tr>
       `;
