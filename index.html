@@ -10,10 +10,9 @@
     .calc-card { max-width: 950px; margin: 20px auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
     
     /* CourierBird Brand Header Styling */
-    .brand-header { text-align: center; margin-bottom: 20px; }
-    .logo-container { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 5px; }
-    .brand-text { font-size: 32px; font-weight: 900; color: #0b2368; letter-spacing: 0.5px; }
-    .brand-subtitle { color: #555; font-size: 15px; margin-top: 2px; font-weight: 600; }
+    .brand-header { text-align: center; margin-bottom: 25px; }
+    .brand-logo-img { max-width: 260px; height: auto; display: block; margin: 0 auto 8px auto; }
+    .brand-subtitle { color: #555; font-size: 15px; font-weight: 600; }
     
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     @media(max-width: 600px){ .grid { grid-template-columns: 1fr; } }
@@ -40,21 +39,9 @@
 
 <div class="calc-card">
   
-  <!-- CourierBird Logo Header -->
+  <!-- CourierBird Exact Image Header -->
   <div class="brand-header">
-    <div class="logo-container">
-      <!-- Embedded SVG vector logo matching your image -->
-      <svg width="60" height="45" viewBox="0 0 200 150" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M10 45 C40 45, 75 25, 90 20 C80 50, 70 70, 20 85 Z" fill="#FF6600"/>
-        <path d="M20 58 C50 58, 80 40, 95 35 C85 62, 75 80, 30 92 Z" fill="#FF6600"/>
-        <path d="M30 72 C60 72, 85 58, 100 52 C90 75, 80 90, 40 100 Z" fill="#FF6600"/>
-        <path d="M80 15 C130 15, 140 85, 110 105 C125 75, 115 35, 85 28 Z" fill="#0B2368"/>
-        <path d="M110 40 H155 D165 50 V80 H110 Z" fill="#0B2368"/>
-        <circle cx="60" cy="100" r="12" fill="#0B2368"/>
-        <circle cx="130" cy="100" r="12" fill="#0B2368"/>
-      </svg>
-      <div class="brand-text">COURIERBIRD</div>
-    </div>
+    <img src="https://i.ibb.co/6P6XN4q/courierbird-logo.png" alt="CourierBird Logo" class="brand-logo-img" id="logoImg" onerror="this.src='logo.png'">
     <div class="brand-subtitle">Multi-Carrier Live Shipping Rate Calculator</div>
   </div>
 
