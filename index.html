@@ -261,9 +261,17 @@
 </div>
 
 <script>
-  // Bulletproof Published CSV URLs
-  const DHL1_PUB_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?single=true&output=csv';
-  const DHL2_PUB_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?single=true&output=csv';
+  // Google Sheets Direct Export Base URLs
+  const SHEET1_ID = '1VUF4UxBlyCUIlezfClDRTD6jEKxObWDtWHf5VRv-Mso';
+  const SHEET2_ID = '1SwIBq5IwPJA6nPOCgffCVTOjWM0wip7fhCPgoEPiwF8';
+
+  const DHL1_ZONES = `https://docs.google.com/spreadsheets/d/${SHEET1_ID}/export?format=csv&gid=0`;
+  const DHL1_RATES = `https://docs.google.com/spreadsheets/d/${SHEET1_ID}/export?format=csv&gid=197215827`;
+  const DHL1_RULES = `https://docs.google.com/spreadsheets/d/${SHEET1_ID}/export?format=csv&gid=1402919501`;
+
+  const DHL2_ZONES = `https://docs.google.com/spreadsheets/d/${SHEET2_ID}/export?format=csv&gid=0`;
+  const DHL2_RATES = `https://docs.google.com/spreadsheets/d/${SHEET2_ID}/export?format=csv&gid=197215827`;
+  const DHL2_RULES = `https://docs.google.com/spreadsheets/d/${SHEET2_ID}/export?format=csv&gid=1402919501`;
 
   let globalCountryZoneMap = {};
   let allCountriesList = [];
@@ -304,20 +312,6 @@
     }
     values.push(current.replace(/^"|"$/g, '').trim());
     return values;
-  }
-
-  // Safe CORS Fetcher with Fallback Proxy
-  async function fetchCSVText(url) {
-    try {
-      const res = await fetch(url);
-      if (res.ok) return await res.text();
-    } catch (e) {
-      console.warn("Direct fetch blocked, trying proxy...", e);
-    }
-    // Fallback Proxy if direct fetch is blocked
-    const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
-    const res2 = await fetch(proxyUrl);
-    return await res2.text();
   }
 
   function setupAutocomplete(list) {
@@ -372,7 +366,9 @@
     setupAutocomplete(defaultCountries);
 
     try {
-      const csvText = await fetchCSVText(DHL1_PUB_BASE + '&gid=0');
+      const response = await fetch(DHL1_ZONES);
+      if (!response.ok) return;
+      const csvText = await response.text();
       const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
       let fetchedList = [];
@@ -390,96 +386,91 @@
     }
   }
 
-  async function fetchCarrierRate(pubBaseUrl, carrierName, userZoneRaw, chargeableWt) {
-    try {
-      const [rulesCsv, ratesCsv] = await Promise.all([
-        fetchCSVText(`${pubBaseUrl}&gid=1402919501`),
-        fetchCSVText(`${pubBaseUrl}&gid=197215827`)
-      ]);
+  // Pure Live Sheet Extractor (No Hardcoded Base Values)
+  async function fetchCarrierRate(rulesUrl, ratesUrl, carrierName, userZoneRaw, chargeableWt) {
+    const [rulesRes, ratesRes] = await Promise.all([
+      fetch(rulesUrl),
+      fetch(ratesUrl)
+    ]);
 
-      let fuelSurchargePct = 25;
-      let profitMarginPct = 15;
-      let gstPct = 18;
+    if (!rulesRes.ok || !ratesRes.ok) {
+      throw new Error(`Failed to load Google Sheet data for ${carrierName}`);
+    }
 
-      rulesCsv.split('\n').forEach(line => {
-        const p = parseCSVLine(line);
-        const code = (p[0] || '').trim().toUpperCase();
-        const valStr = (p[3] !== undefined) ? p[3].trim() : '';
+    const rulesCsv = await rulesRes.text();
+    const ratesCsv = await ratesRes.text();
 
-        if (code === 'FS' && valStr !== '') fuelSurchargePct = parseFloat(valStr) || 0;
-        if (code === 'PROFIT' && valStr !== '') profitMarginPct = parseFloat(valStr) || 0;
-        if (code === 'GST' && valStr !== '') gstPct = parseFloat(valStr) || 0;
-      });
+    let fuelSurchargePct = 25;
+    let profitMarginPct = 15;
+    let gstPct = 18;
 
-      const lines = ratesCsv.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-      const headerParts = parseCSVLine(lines[0]);
+    rulesCsv.split('\n').forEach(line => {
+      const p = parseCSVLine(line);
+      const code = (p[0] || '').trim().toUpperCase();
+      const valStr = (p[3] !== undefined) ? p[3].trim() : '';
 
-      let zoneColIndex = -1;
-      const targetZoneClean = userZoneRaw.toLowerCase().replace(/\s+/g, '');
-      
-      for (let col = 0; col < headerParts.length; col++) {
-        const headerClean = headerParts[col].toLowerCase().replace(/\s+/g, '');
-        if (headerClean === targetZoneClean) {
-          zoneColIndex = col;
-          break;
-        }
+      if (code === 'FS' && valStr !== '') fuelSurchargePct = parseFloat(valStr) || 0;
+      if (code === 'PROFIT' && valStr !== '') profitMarginPct = parseFloat(valStr) || 0;
+      if (code === 'GST' && valStr !== '') gstPct = parseFloat(valStr) || 0;
+    });
+
+    const lines = ratesCsv.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const headerParts = parseCSVLine(lines[0]);
+
+    // Match Exact Column Index (Zone 1, Zone 2... Zone 4)
+    let zoneColIndex = -1;
+    const targetZoneClean = userZoneRaw.toLowerCase().replace(/\s+/g, '');
+    
+    for (let col = 0; col < headerParts.length; col++) {
+      const headerClean = headerParts[col].toLowerCase().replace(/\s+/g, '');
+      if (headerClean === targetZoneClean) {
+        zoneColIndex = col;
+        break;
       }
+    }
 
-      if (zoneColIndex === -1) {
-        zoneColIndex = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
-      }
+    if (zoneColIndex === -1) {
+      zoneColIndex = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
+    }
 
-      let baseFreight = 0;
+    let baseFreight = 0;
 
-      for (let i = 1; i < lines.length; i++) {
-        const parts = parseCSVLine(lines[i]);
-        const wt = parseFloat(parts[0]);
-        const rateVal = parseFloat(parts[zoneColIndex]);
-        const type = parts[parts.length - 1] || 'FLAT';
+    for (let i = 1; i < lines.length; i++) {
+      const parts = parseCSVLine(lines[i]);
+      const wt = parseFloat(parts[0]);
+      const rateVal = parseFloat(parts[zoneColIndex]);
+      const type = parts[parts.length - 1] || 'FLAT';
 
-        if (!isNaN(wt) && !isNaN(rateVal)) {
-          if (type.includes('PER_KG') || parts[0].includes('30.1') || parts[0].includes('70.1') || parts[0].includes('300.1')) {
-            if (chargeableWt >= wt) {
-              baseFreight = chargeableWt * rateVal;
-            }
-          } else {
-            if (chargeableWt <= wt) {
-              baseFreight = rateVal;
-              break;
-            }
+      if (!isNaN(wt) && !isNaN(rateVal)) {
+        if (type.includes('PER_KG') || parts[0].includes('30.1') || parts[0].includes('70.1') || parts[0].includes('300.1')) {
+          if (chargeableWt >= wt) {
+            baseFreight = chargeableWt * rateVal;
+          }
+        } else {
+          if (chargeableWt <= wt) {
+            baseFreight = rateVal;
+            break;
           }
         }
       }
-
-      if (baseFreight === 0) baseFreight = chargeableWt * 750;
-
-      const totalCarrierCost = baseFreight * (1 + (fuelSurchargePct / 100));
-      const sellingSubtotal = totalCarrierCost * (1 + (profitMarginPct / 100));
-      const gstAmount = (sellingSubtotal * gstPct) / 100;
-      const grandTotal = sellingSubtotal + gstAmount;
-
-      return {
-        carrierName,
-        subtotal: sellingSubtotal,
-        gstPct,
-        gstAmount,
-        grandTotal
-      };
-    } catch (err) {
-      console.error("Carrier calculation fallback for " + carrierName, err);
-      // Hard Fallback calculation so site NEVER breaks
-      const baseFreight = chargeableWt * (carrierName.includes('2') ? 1855 : 1727);
-      const totalCarrierCost = baseFreight * 1.25;
-      const subtotal = totalCarrierCost * 1.15;
-      const gstAmount = subtotal * 0.18;
-      return {
-        carrierName,
-        subtotal,
-        gstPct: 18,
-        gstAmount,
-        grandTotal: subtotal + gstAmount
-      };
     }
+
+    if (baseFreight === 0) {
+      throw new Error(`Base rate not found for weight ${chargeableWt} KG in ${carrierName}`);
+    }
+
+    const totalCarrierCost = baseFreight * (1 + (fuelSurchargePct / 100));
+    const sellingSubtotal = totalCarrierCost * (1 + (profitMarginPct / 100));
+    const gstAmount = (sellingSubtotal * gstPct) / 100;
+    const grandTotal = sellingSubtotal + gstAmount;
+
+    return {
+      carrierName,
+      subtotal: sellingSubtotal,
+      gstPct,
+      gstAmount,
+      grandTotal
+    };
   }
 
   async function calculateGlobalLiveRates() {
@@ -517,8 +508,8 @@
 
     try {
       const [dhl1Rate, dhl2Rate] = await Promise.all([
-        fetchCarrierRate(DHL1_PUB_BASE, 'DHL Express (Account 1)', userZoneRaw, chargeableWt),
-        fetchCarrierRate(DHL2_PUB_BASE, 'DHL Express (Account 2)', userZoneRaw, chargeableWt)
+        fetchCarrierRate(DHL1_RULES, DHL1_RATES, 'DHL Express (Account 1)', userZoneRaw, chargeableWt),
+        fetchCarrierRate(DHL2_RULES, DHL2_RATES, 'DHL Express (Account 2)', userZoneRaw, chargeableWt)
       ]);
 
       const results = [dhl1Rate, dhl2Rate];
@@ -554,9 +545,9 @@
       document.getElementById('resultBox').style.display = 'block';
 
     } catch (e) {
-      console.error("Critical calculate error:", e);
+      console.error("Calculation Error:", e);
       document.getElementById('loader').style.display = 'none';
-      alert('Error fetching rate calculation. Please check connection.');
+      alert('Error fetching rate calculation. Please check your Google Sheets connection.');
     }
   }
 
