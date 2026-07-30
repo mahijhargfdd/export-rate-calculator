@@ -258,7 +258,7 @@
 </div>
 
 <script>
-  // Perfect Accounts Configurations
+  // Exact Verified Published Links for Account 1 & Account 2
   const ACCOUNTS = [
     {
       name: 'DHL Express (Account 1)',
@@ -367,7 +367,7 @@
     setupAutocomplete(defaultCountries);
 
     try {
-      const response = await fetch(ACCOUNTS[0].zones + '&_t=' + Date.now());
+      const response = await fetch(ACCOUNTS[0].zones + '&_cb=' + Date.now());
       if (!response.ok) return;
       const csvText = await response.text();
       const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
@@ -387,33 +387,48 @@
     }
   }
 
-  // Exact Account Fetcher (Direct Sheet 1 Logic for All Accounts)
+  // Unified Exact Account Fetcher Function
   async function fetchAccountRate(account, userZoneRaw, chargeableWt) {
     const [rulesRes, ratesRes] = await Promise.all([
-      fetch(account.rules + '&_t=' + Date.now()),
-      fetch(account.rates + '&_t=' + Date.now())
+      fetch(account.rules + '&_cb=' + Date.now()),
+      fetch(account.rates + '&_cb=' + Date.now())
     ]);
 
     const rulesCsv = await rulesRes.text();
     const ratesCsv = await ratesRes.text();
 
-    let fuelSurchargePct = 0;
-    let profitMarginPct = 0;
-    let gstPct = 0;
+    let fuelSurchargePct = 25; 
+    let profitMarginPct = 15;  
+    let gstPct = 18;           
 
     rulesCsv.split(/\r?\n/).forEach(line => {
       const p = parseCSVLine(line);
       const code = (p[0] || '').trim().toUpperCase();
       const valStr = (p[3] !== undefined && p[3] !== '') ? p[3].trim() : (p[1] !== undefined ? p[1].trim() : '');
 
-      if (code === 'FS' && valStr !== '') fuelSurchargePct = parseFloat(valStr) || 0;
-      if (code === 'PROFIT' && valStr !== '') profitMarginPct = parseFloat(valStr) || 0;
-      if (code === 'GST' && valStr !== '') gstPct = parseFloat(valStr) || 0;
+      if (code === 'FS' && valStr !== '') fuelSurchargePct = parseFloat(valStr);
+      if (code === 'PROFIT' && valStr !== '') profitMarginPct = parseFloat(valStr);
+      if (code === 'GST' && valStr !== '') gstPct = parseFloat(valStr);
     });
 
     const lines = ratesCsv.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    const headerParts = parseCSVLine(lines[0]);
+
+    // Exact Zone Column Search Logic
     const targetZoneNum = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
-    const zoneColIndex = targetZoneNum; // Direct Zone Index Column (Zone 1 -> Col 1, Zone 4 -> Col 4)
+    let zoneColIndex = -1;
+
+    for (let col = 0; col < headerParts.length; col++) {
+      const hClean = headerParts[col].toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (hClean === `zone${targetZoneNum}`) {
+        zoneColIndex = col;
+        break;
+      }
+    }
+
+    if (zoneColIndex === -1) {
+      zoneColIndex = targetZoneNum; // Fallback to direct Zone column index
+    }
 
     let baseFreight = 0;
 
@@ -423,18 +438,11 @@
 
       const wt = parseFloat(parts[0]);
       const rateVal = parseFloat(parts[zoneColIndex]);
-      const type = parts[parts.length - 1] ? parts[parts.length - 1].toUpperCase() : 'FLAT';
 
       if (!isNaN(wt) && !isNaN(rateVal)) {
-        if (type.includes('PER_KG') || parts[0].includes('.1')) {
-          if (chargeableWt >= wt) {
-            baseFreight = chargeableWt * rateVal;
-          }
-        } else {
-          if (chargeableWt <= wt) {
-            baseFreight = rateVal;
-            break;
-          }
+        if (chargeableWt <= wt) {
+          baseFreight = rateVal;
+          break;
         }
       }
     }
