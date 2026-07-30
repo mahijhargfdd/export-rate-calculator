@@ -258,20 +258,8 @@
 </div>
 
 <script>
-  // Sheet Configurations
-  const SHEET1_ID = '1VUF4UxBlyCUIlezfClDRTD6jEKxObWDtWHf5VRv-Mso';
-  const SHEET2_ID = '1SwIBq5IwPJA6nPOCgffCVTOjWM0wip7fhCPgoEPiwF8';
-
-  const ACCOUNTS = [
-    {
-      name: 'DHL Express (Account 1)',
-      id: SHEET1_ID
-    },
-    {
-      name: 'DHL Express (Account 2)',
-      id: SHEET2_ID
-    }
-  ];
+  // Single Sheet Base URL (Tested & Working Sheet 1)
+  const SHEET1_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?single=true&output=csv';
 
   let globalCountryZoneMap = {};
   let allCountriesList = [];
@@ -295,23 +283,6 @@
     { name: 'France', code: 'FR', zone: 'Zone 7' }
   ];
 
-  // Guaranteed CORS Bypass Fetcher
-  async function fetchCSVContent(sheetId, gid) {
-    const primaryUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
-    try {
-      const res = await fetch(primaryUrl);
-      if (res.ok) {
-        const text = await res.text();
-        if (text && text.trim().length > 10) return text;
-      }
-    } catch(e) {}
-    
-    // Proxy Fallback
-    const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(primaryUrl);
-    const res2 = await fetch(proxyUrl);
-    return await res2.text();
-  }
-
   function parseCSVLine(line) {
     const values = [];
     let current = '';
@@ -321,13 +292,13 @@
       if (char === '"') {
         inQuotes = !inQuotes;
       } else if (char === ',' && !inQuotes) {
-        values.push(current.replace(/^"|"$/g, '').replace(/[\r\n]/g, '').trim());
+        values.push(current.replace(/^"|"$/g, '').trim());
         current = '';
       } else {
         current += char;
       }
     }
-    values.push(current.replace(/^"|"$/g, '').replace(/[\r\n]/g, '').trim());
+    values.push(current.replace(/^"|"$/g, '').trim());
     return values;
   }
 
@@ -383,7 +354,9 @@
     setupAutocomplete(defaultCountries);
 
     try {
-      const csvText = await fetchCSVContent(SHEET1_ID, 0);
+      const response = await fetch(SHEET1_BASE + '&gid=0');
+      if (!response.ok) return;
+      const csvText = await response.text();
       const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
 
       let fetchedList = [];
@@ -401,21 +374,16 @@
     }
   }
 
-  async function fetchAccountRate(account, userZoneRaw, chargeableWt) {
-    const [rulesCsv, ratesCsv] = await Promise.all([
-      fetchCSVContent(account.id, 1402919501),
-      fetchCSVContent(account.id, 197215827)
-    ]);
-
-    let fuelSurchargePct = 25; 
-    let profitMarginPct = 15;  
-    let gstPct = 18;           
+  // Parse Rate Helper
+  function processRateFromCSV(rulesCsv, ratesCsv, carrierName, userZoneRaw, chargeableWt) {
+    let fuelSurchargePct = 25;
+    let profitMarginPct = 15;
+    let gstPct = 18;
 
     rulesCsv.split(/\r?\n/).forEach(line => {
       const p = parseCSVLine(line);
       const code = (p[0] || '').trim().toUpperCase();
-      let valStr = (p[3] !== undefined && p[3] !== '') ? p[3].trim() : (p[1] !== undefined ? p[1].trim() : '');
-      valStr = valStr.replace(/[^0-9.]/g, '');
+      const valStr = (p[3] !== undefined && p[3] !== '') ? p[3].trim() : (p[1] !== undefined ? p[1].trim() : '');
 
       if (code === 'FS' && valStr !== '') fuelSurchargePct = parseFloat(valStr) || 25;
       if (code === 'PROFIT' && valStr !== '') profitMarginPct = parseFloat(valStr) || 15;
@@ -436,7 +404,9 @@
       }
     }
 
-    if (zoneColIndex === -1) zoneColIndex = targetZoneNum;
+    if (zoneColIndex === -1) {
+      zoneColIndex = targetZoneNum;
+    }
 
     let baseFreight = 0;
 
@@ -444,8 +414,8 @@
       const parts = parseCSVLine(lines[i]);
       if (!parts[0]) continue;
 
-      const wt = parseFloat(parts[0].replace(/[^0-9.]/g, ''));
-      const rateVal = parseFloat((parts[zoneColIndex] || '').replace(/[^0-9.]/g, ''));
+      const wt = parseFloat(parts[0]);
+      const rateVal = parseFloat(parts[zoneColIndex]);
 
       if (!isNaN(wt) && !isNaN(rateVal)) {
         if (chargeableWt <= wt) {
@@ -461,7 +431,7 @@
     const grandTotal = sellingSubtotal + gstAmount;
 
     return {
-      carrierName: account.name,
+      carrierName,
       subtotal: sellingSubtotal,
       gstPct,
       gstAmount,
@@ -503,10 +473,21 @@
     const userZoneRaw = globalCountryZoneMap[toCountry.toLowerCase()] || 'Zone 10';
 
     try {
-      const results = await Promise.all(
-        ACCOUNTS.map(acc => fetchAccountRate(acc, userZoneRaw, chargeableWt))
-      );
+      // Fetch Rules, Base_Rates (Acc 1), and Base_Rates_2 (Acc 2) from Sheet 1
+      const [rulesRes, rates1Res, rates2Res] = await Promise.all([
+        fetch(SHEET1_BASE + '&gid=1402919501&_t=' + Date.now()),  // Rules_Addons
+        fetch(SHEET1_BASE + '&gid=197215827&_t=' + Date.now()),   // Base_Rates (Account 1)
+        fetch(SHEET1_BASE + '&gid=1518997283&_t=' + Date.now())  // Base_Rates_2 (Account 2 GID: 1518997283)
+      ]);
 
+      const rulesCsv = await rulesRes.text();
+      const rates1Csv = await rates1Res.text();
+      const rates2Csv = await rates2Res.text();
+
+      const dhl1Rate = processRateFromCSV(rulesCsv, rates1Csv, 'DHL Express (Account 1)', userZoneRaw, chargeableWt);
+      const dhl2Rate = processRateFromCSV(rulesCsv, rates2Csv, 'DHL Express (Account 2)', userZoneRaw, chargeableWt);
+
+      const results = [dhl1Rate, dhl2Rate];
       results.sort((a, b) => a.grandTotal - b.grandTotal);
 
       document.getElementById('loader').style.display = 'none';
