@@ -191,7 +191,7 @@
     
     <div class="form-group">
       <label>Destination Country</label>
-      <input type="text" id="countryInput" placeholder="Type country name or code (e.g. Saudi, SA, UAE)..." autocomplete="off">
+      <input type="text" id="countryInput" placeholder="Type country name or code (e.g. Saudi, SA, USA)..." autocomplete="off">
       <input type="hidden" id="selectedCountryValue">
       <div id="autocompleteList" class="autocomplete-items"></div>
     </div>
@@ -240,7 +240,7 @@
     <div class="partner-title">Official Logistics Network Partners</div>
     <div class="partner-badges">
       <span class="partner-badge" style="color:#d40511;"><i class="fa-solid fa-plane"></i> DHL Express</span>
-      <span class="partner-badge" style="color:#e50012;"><i class="fa-solid fa-box"></i> Aramex</span>
+      <span class="partner-badge" style="color:#e50012;"><i class="fa-solid fa-box"></i> Aramex Express</span>
     </div>
   </div>
 
@@ -259,15 +259,17 @@
 </div>
 
 <script>
-  // Central Sheet URL (Sheet 1)
+  // Central Sheet Base URL
   const SHEET_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?single=true&output=csv';
 
-  // Dynamic Tab Fetcher by Name/GID Fallback
+  // Exact GIDs for all tabs
   const GIDS = {
     COUNTRY_ZONES: 0,
     DHL1_RATES: 197215827,
     DHL2_RATES: 1518997283,
-    DHL_RULES: 1402919501
+    DHL_RULES: 1402919501,
+    ARAMEX_RATES: 1867409658,
+    ARAMEX_RULES: 425772554
   };
 
   let globalCountryDHLMap = {};
@@ -403,7 +405,6 @@
     }
   }
 
-  // Universal Rate Calculator (DHL & Aramex Rules Supported)
   function processCarrierCalculation(rulesCsv, ratesCsv, carrierName, userZoneRaw, chargeableWt) {
     if(!ratesCsv || ratesCsv.trim().length < 10) return null;
 
@@ -413,20 +414,22 @@
     let esPct = 0;
     let essPerKg = 0;
 
-    rulesCsv.split(/\r?\n/).forEach(line => {
-      const p = parseCSVLine(line);
-      const code = (p[0] || '').trim().toUpperCase();
-      const valStr = (p[3] !== undefined && p[3] !== '') ? p[3].trim() : (p[1] !== undefined ? p[1].trim() : '');
-      const val = parseFloat(valStr);
+    if (rulesCsv) {
+      rulesCsv.split(/\r?\n/).forEach(line => {
+        const p = parseCSVLine(line);
+        const code = (p[0] || '').trim().toUpperCase();
+        const valStr = (p[3] !== undefined && p[3] !== '') ? p[3].trim() : (p[1] !== undefined ? p[1].trim() : '');
+        const val = parseFloat(valStr);
 
-      if (!isNaN(val)) {
-        if (code === 'FS') fsPct = val;
-        if (code === 'PROFIT') profitPct = val;
-        if (code === 'GST') gstPct = val;
-        if (code === 'ES') esPct = val;
-        if (code === 'ESS') essPerKg = val;
-      }
-    });
+        if (!isNaN(val)) {
+          if (code === 'FS') fsPct = val;
+          if (code === 'PROFIT') profitPct = val;
+          if (code === 'GST') gstPct = val;
+          if (code === 'ES') esPct = val;
+          if (code === 'ESS') essPerKg = val;
+        }
+      });
+    }
 
     const lines = ratesCsv.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
     const headerParts = parseCSVLine(lines[0]);
@@ -472,7 +475,7 @@
 
     if (baseFreight === 0) return null;
 
-    // Surcharges
+    // Calculations
     const esCost = baseFreight * (esPct / 100);
     const fsCost = baseFreight * (fsPct / 100);
     const essCost = chargeableWt * essPerKg;
@@ -484,6 +487,7 @@
 
     return {
       carrierName,
+      userZoneRaw,
       subtotal: sellingSubtotal,
       gstPct,
       gstAmount,
@@ -526,19 +530,23 @@
     const aramexZoneRaw = globalCountryAramexMap[toCountry.toLowerCase()] || dhlZoneRaw;
 
     try {
-      // Fetch Rules and Rates in Parallel
-      const [dhlRulesCsv, dhl1Csv, dhl2Csv] = await Promise.all([
+      // Fetch Rules and Rates for DHL 1, DHL 2, and Aramex
+      const [dhlRulesCsv, dhl1Csv, dhl2Csv, aramexRulesCsv, aramexCsv] = await Promise.all([
         fetchTabCSV(GIDS.DHL_RULES),
         fetchTabCSV(GIDS.DHL1_RATES),
-        fetchTabCSV(GIDS.DHL2_RATES)
+        fetchTabCSV(GIDS.DHL2_RATES),
+        fetchTabCSV(GIDS.ARAMEX_RULES),
+        fetchTabCSV(GIDS.ARAMEX_RATES)
       ]);
 
       const dhl1Rate = processCarrierCalculation(dhlRulesCsv, dhl1Csv, 'DHL Express (Account 1)', dhlZoneRaw, chargeableWt);
       const dhl2Rate = processCarrierCalculation(dhlRulesCsv, dhl2Csv, 'DHL Express (Account 2)', dhlZoneRaw, chargeableWt);
+      const aramexRate = processCarrierCalculation(aramexRulesCsv, aramexCsv, 'Aramex Express', aramexZoneRaw, chargeableWt);
 
       let results = [];
       if (dhl1Rate) results.push(dhl1Rate);
       if (dhl2Rate) results.push(dhl2Rate);
+      if (aramexRate) results.push(aramexRate);
 
       results.sort((a, b) => a.grandTotal - b.grandTotal);
 
@@ -556,7 +564,7 @@
               <span class="badge">Live</span> 
               ${isBest ? '<span class="cheapest-tag">Best Price</span>' : ''}
             </td>
-            <td>${fromCountry} ➔ ${toCountry} (${dhlZoneRaw})</td>
+            <td>${fromCountry} ➔ ${toCountry} (${res.userZoneRaw})</td>
             <td>3-5 Days</td>
             <td>${fmt(res.subtotal)}</td>
             <td style="color: #dc2626; font-weight: 700;">+ ${fmt(res.gstAmount)} (${res.gstPct}%)</td>
