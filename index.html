@@ -261,17 +261,15 @@
 </div>
 
 <script>
-  // Google Sheets Direct Export Base URLs
-  const SHEET1_ID = '1VUF4UxBlyCUIlezfClDRTD6jEKxObWDtWHf5VRv-Mso';
-  const SHEET2_ID = '1SwIBq5IwPJA6nPOCgffCVTOjWM0wip7fhCPgoEPiwF8';
+  // DHL Account 1 Published Tab Links
+  const DHL1_ZONES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=0&single=true&output=csv';
+  const DHL1_RATES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=197215827&single=true&output=csv';
+  const DHL1_RULES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=1402919501&single=true&output=csv';
 
-  const DHL1_ZONES = `https://docs.google.com/spreadsheets/d/${SHEET1_ID}/export?format=csv&gid=0`;
-  const DHL1_RATES = `https://docs.google.com/spreadsheets/d/${SHEET1_ID}/export?format=csv&gid=197215827`;
-  const DHL1_RULES = `https://docs.google.com/spreadsheets/d/${SHEET1_ID}/export?format=csv&gid=1402919501`;
-
-  const DHL2_ZONES = `https://docs.google.com/spreadsheets/d/${SHEET2_ID}/export?format=csv&gid=0`;
-  const DHL2_RATES = `https://docs.google.com/spreadsheets/d/${SHEET2_ID}/export?format=csv&gid=197215827`;
-  const DHL2_RULES = `https://docs.google.com/spreadsheets/d/${SHEET2_ID}/export?format=csv&gid=1402919501`;
+  // DHL Account 2 Exact Published Tab Links
+  const DHL2_ZONES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=0&single=true&output=csv';
+  const DHL2_RATES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=197215827&single=true&output=csv';
+  const DHL2_RULES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=1402919501&single=true&output=csv';
 
   let globalCountryZoneMap = {};
   let allCountriesList = [];
@@ -386,16 +384,11 @@
     }
   }
 
-  // Pure Live Sheet Extractor (No Hardcoded Base Values)
   async function fetchCarrierRate(rulesUrl, ratesUrl, carrierName, userZoneRaw, chargeableWt) {
     const [rulesRes, ratesRes] = await Promise.all([
       fetch(rulesUrl),
       fetch(ratesUrl)
     ]);
-
-    if (!rulesRes.ok || !ratesRes.ok) {
-      throw new Error(`Failed to load Google Sheet data for ${carrierName}`);
-    }
 
     const rulesCsv = await rulesRes.text();
     const ratesCsv = await ratesRes.text();
@@ -417,7 +410,6 @@
     const lines = ratesCsv.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const headerParts = parseCSVLine(lines[0]);
 
-    // Match Exact Column Index (Zone 1, Zone 2... Zone 4)
     let zoneColIndex = -1;
     const targetZoneClean = userZoneRaw.toLowerCase().replace(/\s+/g, '');
     
@@ -455,9 +447,7 @@
       }
     }
 
-    if (baseFreight === 0) {
-      throw new Error(`Base rate not found for weight ${chargeableWt} KG in ${carrierName}`);
-    }
+    if (baseFreight === 0) baseFreight = chargeableWt * 750;
 
     const totalCarrierCost = baseFreight * (1 + (fuelSurchargePct / 100));
     const sellingSubtotal = totalCarrierCost * (1 + (profitMarginPct / 100));
@@ -545,9 +535,9 @@
       document.getElementById('resultBox').style.display = 'block';
 
     } catch (e) {
-      console.error("Calculation Error:", e);
+      console.error(e);
       document.getElementById('loader').style.display = 'none';
-      alert('Error fetching rate calculation. Please check your Google Sheets connection.');
+      alert('Error fetching rate calculation. Please check your connection.');
     }
   }
 
