@@ -261,9 +261,18 @@
 </div>
 
 <script>
-  // Simple Base Published URLs
-  const DHL1_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?output=csv';
-  const DHL2_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?output=csv';
+  // Sheet IDs
+  const SHEET1_ID = '1VUF4UxBlyCUIlezfClDRTD6jEKxObWDtWHf5VRv-Mso';
+  const SHEET2_ID = '1SwIBq5IwPJA6nPOCgffCVTOjWM0wip7fhCPgoEPiwF8';
+
+  // Export URLs
+  const DHL1_ZONES = `https://docs.google.com/spreadsheets/d/${SHEET1_ID}/export?format=csv&gid=0`;
+  const DHL1_RATES = `https://docs.google.com/spreadsheets/d/${SHEET1_ID}/export?format=csv&gid=197215827`;
+  const DHL1_RULES = `https://docs.google.com/spreadsheets/d/${SHEET1_ID}/export?format=csv&gid=1402919501`;
+
+  const DHL2_ZONES = `https://docs.google.com/spreadsheets/d/${SHEET2_ID}/export?format=csv&gid=0`;
+  const DHL2_RATES = `https://docs.google.com/spreadsheets/d/${SHEET2_ID}/export?format=csv&gid=197215827`;
+  const DHL2_RULES = `https://docs.google.com/spreadsheets/d/${SHEET2_ID}/export?format=csv&gid=1402919501`;
 
   let globalCountryZoneMap = {};
   let allCountriesList = [];
@@ -358,7 +367,7 @@
     setupAutocomplete(defaultCountries);
 
     try {
-      const response = await fetch(DHL1_BASE + '&gid=0');
+      const response = await fetch(DHL1_ZONES);
       if (!response.ok) return;
       const csvText = await response.text();
       const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -378,13 +387,10 @@
     }
   }
 
-  async function fetchCarrierRate(baseUrl, carrierName, userZoneRaw, chargeableWt) {
-    const zoneColIndex = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
-
-    // Fetch tab data safely using simple &gid parameter
+  async function fetchCarrierRate(rulesUrl, ratesUrl, carrierName, userZoneRaw, chargeableWt) {
     const [rulesRes, ratesRes] = await Promise.all([
-      fetch(baseUrl + '&gid=1402919501'),
-      fetch(baseUrl + '&gid=197215827')
+      fetch(rulesUrl),
+      fetch(ratesUrl)
     ]);
 
     const rulesCsv = await rulesRes.text();
@@ -405,6 +411,24 @@
     });
 
     const lines = ratesCsv.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const headerParts = parseCSVLine(lines[0]);
+
+    // Exact Header Name Matching
+    let zoneColIndex = -1;
+    const targetZoneClean = userZoneRaw.toLowerCase().replace(/\s+/g, '');
+    
+    for (let col = 0; col < headerParts.length; col++) {
+      const headerClean = headerParts[col].toLowerCase().replace(/\s+/g, '');
+      if (headerClean === targetZoneClean) {
+        zoneColIndex = col;
+        break;
+      }
+    }
+
+    if (zoneColIndex === -1) {
+      zoneColIndex = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
+    }
+
     let baseFreight = 0;
 
     for (let i = 1; i < lines.length; i++) {
@@ -478,8 +502,8 @@
 
     try {
       const [dhl1Rate, dhl2Rate] = await Promise.all([
-        fetchCarrierRate(DHL1_BASE, 'DHL Express (Account 1)', userZoneRaw, chargeableWt),
-        fetchCarrierRate(DHL2_BASE, 'DHL Express (Account 2)', userZoneRaw, chargeableWt)
+        fetchCarrierRate(DHL1_RULES, DHL1_RATES, 'DHL Express (Account 1)', userZoneRaw, chargeableWt),
+        fetchCarrierRate(DHL2_RULES, DHL2_RATES, 'DHL Express (Account 2)', userZoneRaw, chargeableWt)
       ]);
 
       const results = [dhl1Rate, dhl2Rate];
