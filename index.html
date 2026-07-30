@@ -8,6 +8,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
+  <!-- jQuery & Select2 Library (For Searchable Dropdown) -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
   <style>
     * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
     
@@ -88,11 +93,32 @@
       transition: all 0.2s;
     }
 
-    input:focus, select:focus {
-      border-color: #f97316;
-      box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.12);
+    /* Custom Styling for Select2 Dropdown */
+    .select2-container--default .select2-selection--single {
+      height: 48px !important;
+      border: 1.5px solid #cbd5e1 !important;
+      border-radius: 10px !important;
+      padding: 8px 10px !important;
     }
-    
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+      font-size: 14px !important;
+      font-weight: 600 !important;
+      color: #0f172a !important;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+      height: 46px !important;
+    }
+    .select2-dropdown {
+      border-radius: 10px !important;
+      border: 1px solid #cbd5e1 !important;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+    }
+    .select2-search__field {
+      padding: 8px !important;
+      border-radius: 6px !important;
+      outline: none !important;
+    }
+
     button { 
       width: 100%; 
       background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); 
@@ -161,9 +187,9 @@
       </select>
     </div>
     <div class="form-group">
-      <label>Destination Country</label>
-      <select id="country">
-        <option value="" disabled selected>-- Select Destination Country --</option>
+      <label>Destination Country (Search Type)</label>
+      <select id="country" style="width: 100%;">
+        <option value="" disabled selected>Search Destination Country...</option>
       </select>
     </div>
   </div>
@@ -232,7 +258,7 @@
 </div>
 
 <script>
-  // Published Google Sheet Base URLs
+  // Base Sheet URLs
   const BASE_PUB_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?single=true&output=csv';
 
   const URL_COUNTRY_ZONES = BASE_PUB_URL + '&gid=0';
@@ -280,17 +306,22 @@
   }
 
   function renderCountryDropdown(list) {
-    const countrySelect = document.getElementById('country');
-    countrySelect.innerHTML = '<option value="" disabled selected>-- Select Destination Country --</option>';
+    const countrySelect = $('#country');
+    countrySelect.empty();
+    countrySelect.append('<option value="" disabled selected>Search Country (e.g. Saudi, UAE, USA)...</option>');
 
     list.sort((a, b) => a.name.localeCompare(b.name));
 
     list.forEach(c => {
       globalCountryZoneMap[c.name.toLowerCase()] = c.zone;
-      const opt = document.createElement('option');
-      opt.value = c.name;
-      opt.textContent = `${c.name} (${c.code})`;
-      countrySelect.appendChild(opt);
+      const opt = new Option(`${c.name} (${c.code})`, c.name, false, false);
+      countrySelect.append(opt);
+    });
+
+    // Initialize Select2 Search Box
+    countrySelect.select2({
+      placeholder: "Type country name (e.g. Saudi, Canada)...",
+      allowClear: true
     });
   }
 
@@ -327,10 +358,10 @@
   }
 
   async function calculateGlobalLiveRates() {
-    const toCountry = document.getElementById('country').value;
+    const toCountry = $('#country').val();
 
     if (!toCountry) {
-      alert('Please select a Destination Country first!');
+      alert('Please select or search a Destination Country first!');
       return;
     }
 
@@ -359,7 +390,6 @@
       const rulesCsv = await rulesRes.text();
       const ratesCsv = await ratesRes.text();
 
-      // Dynamic Rule Extractor (Strict Sheet Values)
       let fuelSurchargePct = 0;
       let profitMarginPct = 0;
       let gstPct = 0;
@@ -380,7 +410,6 @@
         }
       });
 
-      // Update Table Header to Match Exact Sheet GST %
       document.getElementById('gstHeaderLabel').innerText = `GST (${gstPct}%)`;
 
       const lines = ratesCsv.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -408,7 +437,6 @@
 
       if (baseFreight === 0) baseFreight = chargeableWt * 750;
 
-      // 100% Dynamic Math
       const totalCarrierCost = baseFreight * (1 + (fuelSurchargePct / 100));
       const sellingSubtotal = totalCarrierCost * (1 + (profitMarginPct / 100));
       const gstAmount = (sellingSubtotal * gstPct) / 100;
