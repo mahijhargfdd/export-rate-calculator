@@ -295,6 +295,7 @@
     { name: 'France', code: 'FR', zone: 'Zone 7' }
   ];
 
+  // Ultra-Clean CSV Line Parser
   function parseCSVLine(line) {
     const values = [];
     let current = '';
@@ -304,13 +305,13 @@
       if (char === '"') {
         inQuotes = !inQuotes;
       } else if (char === ',' && !inQuotes) {
-        values.push(current.replace(/^"|"$/g, '').trim());
+        values.push(current.replace(/^"|"$/g, '').replace(/[\r\n]/g, '').trim());
         current = '';
       } else {
         current += char;
       }
     }
-    values.push(current.replace(/^"|"$/g, '').trim());
+    values.push(current.replace(/^"|"$/g, '').replace(/[\r\n]/g, '').trim());
     return values;
   }
 
@@ -386,7 +387,7 @@
     }
   }
 
-  // Guaranteed Precise Parser
+  // Pure Bulletproof Rate Matcher
   async function fetchAccountRate(account, userZoneRaw, chargeableWt) {
     const [rulesRes, ratesRes] = await Promise.all([
       fetch(account.rules + '&_cb=' + Date.now()),
@@ -403,17 +404,20 @@
     rulesCsv.split(/\r?\n/).forEach(line => {
       const p = parseCSVLine(line);
       const code = (p[0] || '').trim().toUpperCase();
-      const valStr = (p[3] !== undefined && p[3] !== '') ? p[3].trim() : (p[1] !== undefined ? p[1].trim() : '');
+      let valStr = '';
+      if (p[3] !== undefined && p[3] !== '') valStr = p[3].trim();
+      else if (p[1] !== undefined && p[1] !== '') valStr = p[1].trim();
 
-      if (code === 'FS' && valStr !== '' && !isNaN(parseFloat(valStr))) fuelSurchargePct = parseFloat(valStr);
-      if (code === 'PROFIT' && valStr !== '' && !isNaN(parseFloat(valStr))) profitMarginPct = parseFloat(valStr);
-      if (code === 'GST' && valStr !== '' && !isNaN(parseFloat(valStr))) gstPct = parseFloat(valStr);
+      valStr = valStr.replace(/[^0-9.]/g, '');
+      if (code === 'FS' && valStr !== '') fuelSurchargePct = parseFloat(valStr);
+      if (code === 'PROFIT' && valStr !== '') profitMarginPct = parseFloat(valStr);
+      if (code === 'GST' && valStr !== '') gstPct = parseFloat(valStr);
     });
 
     const lines = ratesCsv.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
     const headerParts = parseCSVLine(lines[0]);
 
-    // Exact Header Row Match
+    // Target Zone Numeric Lookup
     const targetZoneNum = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
     let zoneColIndex = -1;
 
@@ -425,8 +429,9 @@
       }
     }
 
+    // Direct Column Index Fallback (Zone 1 -> Col 1, Zone 4 -> Col 4)
     if (zoneColIndex === -1) {
-      zoneColIndex = targetZoneNum; // Direct Index Mapping (Zone 1 -> Col 1, Zone 4 -> Col 4)
+      zoneColIndex = targetZoneNum;
     }
 
     let baseFreight = 0;
@@ -435,8 +440,8 @@
       const parts = parseCSVLine(lines[i]);
       if (!parts[0]) continue;
 
-      const wt = parseFloat(parts[0]);
-      const rateVal = parseFloat(parts[zoneColIndex]);
+      const wt = parseFloat(parts[0].replace(/[^0-9.]/g, ''));
+      const rateVal = parseFloat((parts[zoneColIndex] || '').replace(/[^0-9.]/g, ''));
 
       if (!isNaN(wt) && !isNaN(rateVal)) {
         if (chargeableWt <= wt) {
@@ -446,10 +451,10 @@
       }
     }
 
-    // Safety fallback for exact weight match if loop passed boundary
-    if (baseFreight === 0 && lines.length > 1) {
-      const lastParts = parseCSVLine(lines[1]);
-      baseFreight = parseFloat(lastParts[zoneColIndex]) || 1855;
+    // Hard fallback if row iteration missed due to formatting
+    if ((isNaN(baseFreight) || baseFreight === 0) && lines.length > 1) {
+      const firstRowParts = parseCSVLine(lines[1]);
+      baseFreight = parseFloat((firstRowParts[zoneColIndex] || '').replace(/[^0-9.]/g, '')) || 0;
     }
 
     const totalCarrierCost = baseFreight * (1 + (fuelSurchargePct / 100));
