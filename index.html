@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CourierBird - Global Shipping Rate Calculator</title>
+  <title>CourierBird - Enterprise Global Shipping Rate Calculator</title>
   <!-- Google Fonts & FontAwesome Icons -->
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -250,7 +250,7 @@
         <i class="fa-brands fa-whatsapp" style="font-size: 18px;"></i> Chat on WhatsApp (+91 77238 37272)
       </a>
       <a href="mailto:courierbirdshipping@gmail.com?subject=International%20Shipping%20Inquiry" class="btn-contact btn-email">
-        <i class="fa-regular fa-envelope" style="font-size: 14px;"></i> Email Support
+        <i class="fa-regular fa-envelope" style="font-size: 16px;"></i> Email Support
       </a>
     </div>
   </div>
@@ -258,11 +258,15 @@
 </div>
 
 <script>
-  // SIRF 2 SHEET ACCOUNTS SETUP (NO FALLBACKS, NO EXTRA SHEETS)
-  const SHEET1_ID = '1VUF4UxBlyCUIlezfClDRTD6jEKxObWDtWHf5VRv-Mso'; // DHL Account 1
-  const SHEET2_ID = '1SwIBq5IwPJA6nPOCgffCVTOjWM0wip7fhCPgoEPiwF8'; // DHL Account 2
+  // DHL Account 1 Exact Published Links
+  const DHL1_ZONES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=0&single=true&output=csv';
+  const DHL1_RATES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=197215827&single=true&output=csv';
+  const DHL1_RULES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=1402919501&single=true&output=csv';
 
-  const getGvizUrl = (sheetId, gid) => `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}`;
+  // DHL Account 2 Exact Published Links
+  const DHL2_ZONES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=0&single=true&output=csv';
+  const DHL2_RATES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=197215827&single=true&output=csv';
+  const DHL2_RULES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=1402919501&single=true&output=csv';
 
   let globalCountryZoneMap = {};
   let allCountriesList = [];
@@ -357,7 +361,7 @@
     setupAutocomplete(defaultCountries);
 
     try {
-      const response = await fetch(getGvizUrl(SHEET1_ID, 0));
+      const response = await fetch(DHL1_ZONES);
       if (!response.ok) return;
       const csvText = await response.text();
       const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -377,14 +381,10 @@
     }
   }
 
-  // Pure Sheet Rate Calculation - Pure Live Fetch
-  async function fetchCarrierRate(sheetId, carrierName, userZoneRaw, chargeableWt) {
-    const rulesUrl = getGvizUrl(sheetId, 1402919501);
-    const ratesUrl = getGvizUrl(sheetId, 197215827);
-
+  async function fetchCarrierRate(rulesUrl, ratesUrl, carrierName, userZoneRaw, chargeableWt) {
     const [rulesRes, ratesRes] = await Promise.all([
-      fetch(rulesUrl),
-      fetch(ratesUrl)
+      fetch(rulesUrl + '&t=' + Date.now()),
+      fetch(ratesUrl + '&t=' + Date.now())
     ]);
 
     const rulesCsv = await rulesRes.text();
@@ -407,9 +407,10 @@
     const lines = ratesCsv.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const headerParts = parseCSVLine(lines[0]);
 
+    // Exact Header Match (Matches "Zone 4" to correct Column)
     let zoneColIndex = -1;
     const targetZoneClean = userZoneRaw.toLowerCase().replace(/\s+/g, '');
-    
+
     for (let col = 0; col < headerParts.length; col++) {
       const headerClean = headerParts[col].toLowerCase().replace(/\s+/g, '');
       if (headerClean === targetZoneClean) {
@@ -492,10 +493,9 @@
     const userZoneRaw = globalCountryZoneMap[toCountry.toLowerCase()] || 'Zone 10';
 
     try {
-      // ONLY FETCH FROM THE 2 GIVEN SHEET ACCOUNTS
       const [dhl1Rate, dhl2Rate] = await Promise.all([
-        fetchCarrierRate(SHEET1_ID, 'DHL Express (Account 1)', userZoneRaw, chargeableWt),
-        fetchCarrierRate(SHEET2_ID, 'DHL Express (Account 2)', userZoneRaw, chargeableWt)
+        fetchCarrierRate(DHL1_RULES, DHL1_RATES, 'DHL Express (Account 1)', userZoneRaw, chargeableWt),
+        fetchCarrierRate(DHL2_RULES, DHL2_RATES, 'DHL Express (Account 2)', userZoneRaw, chargeableWt)
       ]);
 
       const results = [dhl1Rate, dhl2Rate];
@@ -533,7 +533,7 @@
     } catch (e) {
       console.error("Calculation Error:", e);
       document.getElementById('loader').style.display = 'none';
-      alert('Error fetching rate calculation. Please check your Google Sheets connection.');
+      alert('Error fetching rate calculation. Please check your connection.');
     }
   }
 
