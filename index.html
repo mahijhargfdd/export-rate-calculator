@@ -261,19 +261,9 @@
 </div>
 
 <script>
-  // Sheet 1 ID (DHL Account 1)
-  const SHEET1_ID = '1VUF4UxBlyCUIlezfClDRTD6jEKxObWDtWHf5VRv-Mso';
-  // Sheet 2 ID (DHL Account 2)
-  const SHEET2_ID = '1SwIBq5IwPJA6nPOCgffCVTOjWM0wip7fhCPgoEPiwF8';
-
-  // Direct Tab Export URLs
-  const DHL1_ZONES = `https://docs.google.com/spreadsheets/d/${SHEET1_ID}/export?format=csv&gid=0`;
-  const DHL1_RATES = `https://docs.google.com/spreadsheets/d/${SHEET1_ID}/export?format=csv&gid=197215827`;
-  const DHL1_RULES = `https://docs.google.com/spreadsheets/d/${SHEET1_ID}/export?format=csv&gid=1402919501`;
-
-  const DHL2_ZONES = `https://docs.google.com/spreadsheets/d/${SHEET2_ID}/export?format=csv&gid=0`;
-  const DHL2_RATES = `https://docs.google.com/spreadsheets/d/${SHEET2_ID}/export?format=csv&gid=197215827`;
-  const DHL2_RULES = `https://docs.google.com/spreadsheets/d/${SHEET2_ID}/export?format=csv&gid=1402919501`;
+  // Official Published CSV Links (CORS Allowed)
+  const DHL1_PUB_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?single=true&output=csv';
+  const DHL2_PUB_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?single=true&output=csv';
 
   let globalCountryZoneMap = {};
   let allCountriesList = [];
@@ -368,7 +358,7 @@
     setupAutocomplete(defaultCountries);
 
     try {
-      const response = await fetch(DHL1_ZONES);
+      const response = await fetch(DHL1_PUB_BASE + '&gid=0');
       if (!response.ok) return;
       const csvText = await response.text();
       const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -388,20 +378,21 @@
     }
   }
 
-  async function fetchCarrierRate(rulesUrl, ratesUrl, carrierName, userZoneRaw, chargeableWt) {
+  async function fetchCarrierRate(pubBaseUrl, carrierName, userZoneRaw, chargeableWt) {
     const zoneColIndex = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
 
+    // Fetch tab data safely
     const [rulesRes, ratesRes] = await Promise.all([
-      fetch(`${rulesUrl}&t=${Date.now()}`),
-      fetch(`${ratesUrl}&t=${Date.now()}`)
+      fetch(`${pubBaseUrl}&gid=1402919501&nocache=${Date.now()}`),
+      fetch(`${pubBaseUrl}&gid=197215827&nocache=${Date.now()}`)
     ]);
 
     const rulesCsv = await rulesRes.text();
     const ratesCsv = await ratesRes.text();
 
-    let fuelSurchargePct = 0;
-    let profitMarginPct = 0;
-    let gstPct = 0;
+    let fuelSurchargePct = 25;
+    let profitMarginPct = 15;
+    let gstPct = 18;
 
     rulesCsv.split('\n').forEach(line => {
       const p = parseCSVLine(line);
@@ -487,8 +478,8 @@
 
     try {
       const [dhl1Rate, dhl2Rate] = await Promise.all([
-        fetchCarrierRate(DHL1_RULES, DHL1_RATES, 'DHL Express (Account 1)', userZoneRaw, chargeableWt),
-        fetchCarrierRate(DHL2_RULES, DHL2_RATES, 'DHL Express (Account 2)', userZoneRaw, chargeableWt)
+        fetchCarrierRate(DHL1_PUB_BASE, 'DHL Express (Account 1)', userZoneRaw, chargeableWt),
+        fetchCarrierRate(DHL2_PUB_BASE, 'DHL Express (Account 2)', userZoneRaw, chargeableWt)
       ]);
 
       const results = [dhl1Rate, dhl2Rate];
