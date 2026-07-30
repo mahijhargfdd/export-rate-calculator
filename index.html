@@ -261,15 +261,19 @@
 </div>
 
 <script>
-  // Direct Tab CSV Exports for Sheet 1 (DHL Express Account 1)
-  const DHL1_ZONES  = 'https://docs.google.com/spreadsheets/d/1VUF4UxBlyCUIlezfClDRTD6jEKxObWDtWHf5VRv-Mso/export?format=csv&gid=0';
-  const DHL1_RATES  = 'https://docs.google.com/spreadsheets/d/1VUF4UxBlyCUIlezfClDRTD6jEKxObWDtWHf5VRv-Mso/export?format=csv&gid=197215827';
-  const DHL1_RULES  = 'https://docs.google.com/spreadsheets/d/1VUF4UxBlyCUIlezfClDRTD6jEKxObWDtWHf5VRv-Mso/export?format=csv&gid=1402919501';
+  // Sheet 1 ID (DHL Account 1)
+  const SHEET1_ID = '1VUF4UxBlyCUIlezfClDRTD6jEKxObWDtWHf5VRv-Mso';
+  // Sheet 2 ID (DHL Account 2)
+  const SHEET2_ID = '1SwIBq5IwPJA6nPOCgffCVTOjWM0wip7fhCPgoEPiwF8';
 
-  // Direct Tab CSV Exports for Sheet 2 (DHL Express Account 2)
-  const DHL2_ZONES  = 'https://docs.google.com/spreadsheets/d/1SwIBq5IwPJA6nPOCgffCVTOjWM0wip7fhCPgoEPiwF8/export?format=csv&gid=0';
-  const DHL2_RATES  = 'https://docs.google.com/spreadsheets/d/1SwIBq5IwPJA6nPOCgffCVTOjWM0wip7fhCPgoEPiwF8/export?format=csv&gid=197215827';
-  const DHL2_RULES  = 'https://docs.google.com/spreadsheets/d/1SwIBq5IwPJA6nPOCgffCVTOjWM0wip7fhCPgoEPiwF8/export?format=csv&gid=1402919501';
+  // Direct Tab Export URLs
+  const DHL1_ZONES = `https://docs.google.com/spreadsheets/d/${SHEET1_ID}/export?format=csv&gid=0`;
+  const DHL1_RATES = `https://docs.google.com/spreadsheets/d/${SHEET1_ID}/export?format=csv&gid=197215827`;
+  const DHL1_RULES = `https://docs.google.com/spreadsheets/d/${SHEET1_ID}/export?format=csv&gid=1402919501`;
+
+  const DHL2_ZONES = `https://docs.google.com/spreadsheets/d/${SHEET2_ID}/export?format=csv&gid=0`;
+  const DHL2_RATES = `https://docs.google.com/spreadsheets/d/${SHEET2_ID}/export?format=csv&gid=197215827`;
+  const DHL2_RULES = `https://docs.google.com/spreadsheets/d/${SHEET2_ID}/export?format=csv&gid=1402919501`;
 
   let globalCountryZoneMap = {};
   let allCountriesList = [];
@@ -384,7 +388,6 @@
     }
   }
 
-  // Exact Single Carrier Rates Extractor
   async function fetchCarrierRate(rulesUrl, ratesUrl, carrierName, userZoneRaw, chargeableWt) {
     const zoneColIndex = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
 
