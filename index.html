@@ -261,9 +261,9 @@
 </div>
 
 <script>
-  // Official Published CSV Links (CORS Allowed)
-  const DHL1_PUB_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?single=true&output=csv';
-  const DHL2_PUB_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?single=true&output=csv';
+  // Simple Base Published URLs
+  const DHL1_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?output=csv';
+  const DHL2_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?output=csv';
 
   let globalCountryZoneMap = {};
   let allCountriesList = [];
@@ -358,7 +358,7 @@
     setupAutocomplete(defaultCountries);
 
     try {
-      const response = await fetch(DHL1_PUB_BASE + '&gid=0');
+      const response = await fetch(DHL1_BASE + '&gid=0');
       if (!response.ok) return;
       const csvText = await response.text();
       const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -378,13 +378,13 @@
     }
   }
 
-  async function fetchCarrierRate(pubBaseUrl, carrierName, userZoneRaw, chargeableWt) {
+  async function fetchCarrierRate(baseUrl, carrierName, userZoneRaw, chargeableWt) {
     const zoneColIndex = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
 
-    // Fetch tab data safely
+    // Fetch tab data safely using simple &gid parameter
     const [rulesRes, ratesRes] = await Promise.all([
-      fetch(`${pubBaseUrl}&gid=1402919501&nocache=${Date.now()}`),
-      fetch(`${pubBaseUrl}&gid=197215827&nocache=${Date.now()}`)
+      fetch(baseUrl + '&gid=1402919501'),
+      fetch(baseUrl + '&gid=197215827')
     ]);
 
     const rulesCsv = await rulesRes.text();
@@ -478,8 +478,8 @@
 
     try {
       const [dhl1Rate, dhl2Rate] = await Promise.all([
-        fetchCarrierRate(DHL1_PUB_BASE, 'DHL Express (Account 1)', userZoneRaw, chargeableWt),
-        fetchCarrierRate(DHL2_PUB_BASE, 'DHL Express (Account 2)', userZoneRaw, chargeableWt)
+        fetchCarrierRate(DHL1_BASE, 'DHL Express (Account 1)', userZoneRaw, chargeableWt),
+        fetchCarrierRate(DHL2_BASE, 'DHL Express (Account 2)', userZoneRaw, chargeableWt)
       ]);
 
       const results = [dhl1Rate, dhl2Rate];
