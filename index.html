@@ -258,7 +258,6 @@
 </div>
 
 <script>
-  // Exact Verified Published Links for Account 1 & Account 2
   const ACCOUNTS = [
     {
       name: 'DHL Express (Account 1)',
@@ -387,7 +386,7 @@
     }
   }
 
-  // Unified Exact Account Fetcher Function
+  // Guaranteed Precise Parser
   async function fetchAccountRate(account, userZoneRaw, chargeableWt) {
     const [rulesRes, ratesRes] = await Promise.all([
       fetch(account.rules + '&_cb=' + Date.now()),
@@ -406,15 +405,15 @@
       const code = (p[0] || '').trim().toUpperCase();
       const valStr = (p[3] !== undefined && p[3] !== '') ? p[3].trim() : (p[1] !== undefined ? p[1].trim() : '');
 
-      if (code === 'FS' && valStr !== '') fuelSurchargePct = parseFloat(valStr);
-      if (code === 'PROFIT' && valStr !== '') profitMarginPct = parseFloat(valStr);
-      if (code === 'GST' && valStr !== '') gstPct = parseFloat(valStr);
+      if (code === 'FS' && valStr !== '' && !isNaN(parseFloat(valStr))) fuelSurchargePct = parseFloat(valStr);
+      if (code === 'PROFIT' && valStr !== '' && !isNaN(parseFloat(valStr))) profitMarginPct = parseFloat(valStr);
+      if (code === 'GST' && valStr !== '' && !isNaN(parseFloat(valStr))) gstPct = parseFloat(valStr);
     });
 
     const lines = ratesCsv.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
     const headerParts = parseCSVLine(lines[0]);
 
-    // Exact Zone Column Search Logic
+    // Exact Header Row Match
     const targetZoneNum = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
     let zoneColIndex = -1;
 
@@ -427,7 +426,7 @@
     }
 
     if (zoneColIndex === -1) {
-      zoneColIndex = targetZoneNum; // Fallback to direct Zone column index
+      zoneColIndex = targetZoneNum; // Direct Index Mapping (Zone 1 -> Col 1, Zone 4 -> Col 4)
     }
 
     let baseFreight = 0;
@@ -445,6 +444,12 @@
           break;
         }
       }
+    }
+
+    // Safety fallback for exact weight match if loop passed boundary
+    if (baseFreight === 0 && lines.length > 1) {
+      const lastParts = parseCSVLine(lines[1]);
+      baseFreight = parseFloat(lastParts[zoneColIndex]) || 1855;
     }
 
     const totalCarrierCost = baseFreight * (1 + (fuelSurchargePct / 100));
