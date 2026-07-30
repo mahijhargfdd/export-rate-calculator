@@ -258,18 +258,18 @@
 </div>
 
 <script>
+  // Sheet Configurations
+  const SHEET1_ID = '1VUF4UxBlyCUIlezfClDRTD6jEKxObWDtWHf5VRv-Mso';
+  const SHEET2_ID = '1SwIBq5IwPJA6nPOCgffCVTOjWM0wip7fhCPgoEPiwF8';
+
   const ACCOUNTS = [
     {
       name: 'DHL Express (Account 1)',
-      zones: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=0&single=true&output=csv',
-      rates: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=197215827&single=true&output=csv',
-      rules: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=1402919501&single=true&output=csv'
+      id: SHEET1_ID
     },
     {
       name: 'DHL Express (Account 2)',
-      zones: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=0&single=true&output=csv',
-      rates: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=197215827&single=true&output=csv',
-      rules: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=1402919501&single=true&output=csv'
+      id: SHEET2_ID
     }
   ];
 
@@ -295,7 +295,23 @@
     { name: 'France', code: 'FR', zone: 'Zone 7' }
   ];
 
-  // Ultra-Clean CSV Line Parser
+  // Guaranteed CORS Bypass Fetcher
+  async function fetchCSVContent(sheetId, gid) {
+    const primaryUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+    try {
+      const res = await fetch(primaryUrl);
+      if (res.ok) {
+        const text = await res.text();
+        if (text && text.trim().length > 10) return text;
+      }
+    } catch(e) {}
+    
+    // Proxy Fallback
+    const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(primaryUrl);
+    const res2 = await fetch(proxyUrl);
+    return await res2.text();
+  }
+
   function parseCSVLine(line) {
     const values = [];
     let current = '';
@@ -367,9 +383,7 @@
     setupAutocomplete(defaultCountries);
 
     try {
-      const response = await fetch(ACCOUNTS[0].zones + '&_cb=' + Date.now());
-      if (!response.ok) return;
-      const csvText = await response.text();
+      const csvText = await fetchCSVContent(SHEET1_ID, 0);
       const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
 
       let fetchedList = [];
@@ -387,15 +401,11 @@
     }
   }
 
-  // Pure Bulletproof Rate Matcher
   async function fetchAccountRate(account, userZoneRaw, chargeableWt) {
-    const [rulesRes, ratesRes] = await Promise.all([
-      fetch(account.rules + '&_cb=' + Date.now()),
-      fetch(account.rates + '&_cb=' + Date.now())
+    const [rulesCsv, ratesCsv] = await Promise.all([
+      fetchCSVContent(account.id, 1402919501),
+      fetchCSVContent(account.id, 197215827)
     ]);
-
-    const rulesCsv = await rulesRes.text();
-    const ratesCsv = await ratesRes.text();
 
     let fuelSurchargePct = 25; 
     let profitMarginPct = 15;  
@@ -404,20 +414,17 @@
     rulesCsv.split(/\r?\n/).forEach(line => {
       const p = parseCSVLine(line);
       const code = (p[0] || '').trim().toUpperCase();
-      let valStr = '';
-      if (p[3] !== undefined && p[3] !== '') valStr = p[3].trim();
-      else if (p[1] !== undefined && p[1] !== '') valStr = p[1].trim();
-
+      let valStr = (p[3] !== undefined && p[3] !== '') ? p[3].trim() : (p[1] !== undefined ? p[1].trim() : '');
       valStr = valStr.replace(/[^0-9.]/g, '');
-      if (code === 'FS' && valStr !== '') fuelSurchargePct = parseFloat(valStr);
-      if (code === 'PROFIT' && valStr !== '') profitMarginPct = parseFloat(valStr);
-      if (code === 'GST' && valStr !== '') gstPct = parseFloat(valStr);
+
+      if (code === 'FS' && valStr !== '') fuelSurchargePct = parseFloat(valStr) || 25;
+      if (code === 'PROFIT' && valStr !== '') profitMarginPct = parseFloat(valStr) || 15;
+      if (code === 'GST' && valStr !== '') gstPct = parseFloat(valStr) || 18;
     });
 
     const lines = ratesCsv.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
     const headerParts = parseCSVLine(lines[0]);
 
-    // Target Zone Numeric Lookup
     const targetZoneNum = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
     let zoneColIndex = -1;
 
@@ -429,10 +436,7 @@
       }
     }
 
-    // Direct Column Index Fallback (Zone 1 -> Col 1, Zone 4 -> Col 4)
-    if (zoneColIndex === -1) {
-      zoneColIndex = targetZoneNum;
-    }
+    if (zoneColIndex === -1) zoneColIndex = targetZoneNum;
 
     let baseFreight = 0;
 
@@ -449,12 +453,6 @@
           break;
         }
       }
-    }
-
-    // Hard fallback if row iteration missed due to formatting
-    if ((isNaN(baseFreight) || baseFreight === 0) && lines.length > 1) {
-      const firstRowParts = parseCSVLine(lines[1]);
-      baseFreight = parseFloat((firstRowParts[zoneColIndex] || '').replace(/[^0-9.]/g, '')) || 0;
     }
 
     const totalCarrierCost = baseFreight * (1 + (fuelSurchargePct / 100));
