@@ -264,7 +264,7 @@
   // DHL Account 1 Published Sheet
   const DHL1_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?single=true&output=csv';
 
-  // DHL Account 2 Published Sheet
+  // DHL Account 2 Published Sheet (Corrected URL)
   const DHL2_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?single=true&output=csv';
 
   let globalCountryZoneMap = {};
@@ -380,7 +380,7 @@
     }
   }
 
-  // Calculate Single Carrier Sheet
+  // Robust Sheet Calculator
   async function fetchCarrierRate(baseUrl, carrierName, userZoneRaw, chargeableWt) {
     const zoneColIndex = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
 
@@ -479,15 +479,12 @@
     const userZoneRaw = globalCountryZoneMap[toCountry.toLowerCase()] || 'Zone 10';
 
     try {
-      // Parallel fetch for DHL Account 1 & DHL Account 2
       const [dhl1Rate, dhl2Rate] = await Promise.all([
         fetchCarrierRate(DHL1_BASE_URL, 'DHL Express (Account 1)', userZoneRaw, chargeableWt),
         fetchCarrierRate(DHL2_BASE_URL, 'DHL Express (Account 2)', userZoneRaw, chargeableWt)
       ]);
 
       const results = [dhl1Rate, dhl2Rate];
-      
-      // Sort by Cheaper Grand Total
       results.sort((a, b) => a.grandTotal - b.grandTotal);
 
       document.getElementById('loader').style.display = 'none';
