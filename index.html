@@ -258,14 +258,21 @@
 </div>
 
 <script>
-  // Live Published Sheets
-  const DHL1_ZONES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=0&single=true&output=csv';
-  const DHL1_RATES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=197215827&single=true&output=csv';
-  const DHL1_RULES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=1402919501&single=true&output=csv';
-
-  const DHL2_ZONES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=0&single=true&output=csv';
-  const DHL2_RATES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=197215827&single=true&output=csv';
-  const DHL2_RULES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=1402919501&single=true&output=csv';
+  // Perfect Accounts Configurations
+  const ACCOUNTS = [
+    {
+      name: 'DHL Express (Account 1)',
+      zones: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=0&single=true&output=csv',
+      rates: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=197215827&single=true&output=csv',
+      rules: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=1402919501&single=true&output=csv'
+    },
+    {
+      name: 'DHL Express (Account 2)',
+      zones: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=0&single=true&output=csv',
+      rates: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=197215827&single=true&output=csv',
+      rules: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=1402919501&single=true&output=csv'
+    }
+  ];
 
   let globalCountryZoneMap = {};
   let allCountriesList = [];
@@ -360,7 +367,7 @@
     setupAutocomplete(defaultCountries);
 
     try {
-      const response = await fetch(DHL1_ZONES + '&cache=' + Date.now());
+      const response = await fetch(ACCOUNTS[0].zones + '&_t=' + Date.now());
       if (!response.ok) return;
       const csvText = await response.text();
       const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
@@ -380,48 +387,33 @@
     }
   }
 
-  async function fetchCarrierRate(rulesUrl, ratesUrl, carrierName, userZoneRaw, chargeableWt) {
+  // Exact Account Fetcher (Direct Sheet 1 Logic for All Accounts)
+  async function fetchAccountRate(account, userZoneRaw, chargeableWt) {
     const [rulesRes, ratesRes] = await Promise.all([
-      fetch(rulesUrl + '&t=' + Date.now()),
-      fetch(ratesUrl + '&t=' + Date.now())
+      fetch(account.rules + '&_t=' + Date.now()),
+      fetch(account.rates + '&_t=' + Date.now())
     ]);
 
     const rulesCsv = await rulesRes.text();
     const ratesCsv = await ratesRes.text();
 
-    let fuelSurchargePct = 25; // Default from sheet
-    let profitMarginPct = 15;  // Default from sheet
-    let gstPct = 18;           // Default from sheet
+    let fuelSurchargePct = 0;
+    let profitMarginPct = 0;
+    let gstPct = 0;
 
     rulesCsv.split(/\r?\n/).forEach(line => {
       const p = parseCSVLine(line);
       const code = (p[0] || '').trim().toUpperCase();
       const valStr = (p[3] !== undefined && p[3] !== '') ? p[3].trim() : (p[1] !== undefined ? p[1].trim() : '');
 
-      if (code === 'FS' && valStr !== '') fuelSurchargePct = parseFloat(valStr) || fuelSurchargePct;
-      if (code === 'PROFIT' && valStr !== '') profitMarginPct = parseFloat(valStr) || profitMarginPct;
-      if (code === 'GST' && valStr !== '') gstPct = parseFloat(valStr) || gstPct;
+      if (code === 'FS' && valStr !== '') fuelSurchargePct = parseFloat(valStr) || 0;
+      if (code === 'PROFIT' && valStr !== '') profitMarginPct = parseFloat(valStr) || 0;
+      if (code === 'GST' && valStr !== '') gstPct = parseFloat(valStr) || 0;
     });
 
     const lines = ratesCsv.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
-    const headerParts = parseCSVLine(lines[0]);
-
-    // Exact Zone Column Search
     const targetZoneNum = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
-    let zoneColIndex = -1;
-
-    for (let col = 0; col < headerParts.length; col++) {
-      const hClean = headerParts[col].toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (hClean === `zone${targetZoneNum}`) {
-        zoneColIndex = col;
-        break;
-      }
-    }
-
-    // Direct Col Mapping Fallback (Weight = Col 0, Zone 1 = Col 1, Zone 4 = Col 4)
-    if (zoneColIndex === -1) {
-      zoneColIndex = targetZoneNum;
-    }
+    const zoneColIndex = targetZoneNum; // Direct Zone Index Column (Zone 1 -> Col 1, Zone 4 -> Col 4)
 
     let baseFreight = 0;
 
@@ -453,7 +445,7 @@
     const grandTotal = sellingSubtotal + gstAmount;
 
     return {
-      carrierName,
+      carrierName: account.name,
       subtotal: sellingSubtotal,
       gstPct,
       gstAmount,
@@ -495,12 +487,10 @@
     const userZoneRaw = globalCountryZoneMap[toCountry.toLowerCase()] || 'Zone 10';
 
     try {
-      const [dhl1Rate, dhl2Rate] = await Promise.all([
-        fetchCarrierRate(DHL1_RULES, DHL1_RATES, 'DHL Express (Account 1)', userZoneRaw, chargeableWt),
-        fetchCarrierRate(DHL2_RULES, DHL2_RATES, 'DHL Express (Account 2)', userZoneRaw, chargeableWt)
-      ]);
+      const results = await Promise.all(
+        ACCOUNTS.map(acc => fetchAccountRate(acc, userZoneRaw, chargeableWt))
+      );
 
-      const results = [dhl1Rate, dhl2Rate];
       results.sort((a, b) => a.grandTotal - b.grandTotal);
 
       document.getElementById('loader').style.display = 'none';
