@@ -240,6 +240,7 @@
     <div class="partner-title">Official Logistics Network Partners</div>
     <div class="partner-badges">
       <span class="partner-badge" style="color:#d40511;"><i class="fa-solid fa-plane"></i> DHL Express</span>
+      <span class="partner-badge" style="color:#e50012;"><i class="fa-solid fa-box"></i> Aramex</span>
     </div>
   </div>
 
@@ -258,29 +259,38 @@
 </div>
 
 <script>
-  // Single Sheet Base URL (Tested & Working Sheet 1)
-  const SHEET1_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?single=true&output=csv';
+  // Central Sheet URL (Sheet 1)
+  const SHEET_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?single=true&output=csv';
 
-  let globalCountryZoneMap = {};
+  // Dynamic Tab Fetcher by Name/GID Fallback
+  const GIDS = {
+    COUNTRY_ZONES: 0,
+    DHL1_RATES: 197215827,
+    DHL2_RATES: 1518997283,
+    DHL_RULES: 1402919501
+  };
+
+  let globalCountryDHLMap = {};
+  let globalCountryAramexMap = {};
   let allCountriesList = [];
 
   const defaultCountries = [
-    { name: 'United Arab Emirates', code: 'AE', zone: 'Zone 1' },
-    { name: 'Saudi Arabia', code: 'SA', zone: 'Zone 4' },
-    { name: 'United States', code: 'US', zone: 'Zone 8' },
-    { name: 'Canada', code: 'CA', zone: 'Zone 8' },
-    { name: 'United Kingdom', code: 'GB', zone: 'Zone 7' },
-    { name: 'Australia', code: 'AU', zone: 'Zone 6' },
-    { name: 'Germany', code: 'DE', zone: 'Zone 7' },
-    { name: 'Singapore', code: 'SG', zone: 'Zone 2' },
-    { name: 'Malaysia', code: 'MY', zone: 'Zone 2' },
-    { name: 'Qatar', code: 'QA', zone: 'Zone 4' },
-    { name: 'Oman', code: 'OM', zone: 'Zone 4' },
-    { name: 'Kuwait', code: 'KW', zone: 'Zone 4' },
-    { name: 'Bahrain', code: 'BH', zone: 'Zone 4' },
-    { name: 'China', code: 'CN', zone: 'Zone 3' },
-    { name: 'Japan', code: 'JP', zone: 'Zone 5' },
-    { name: 'France', code: 'FR', zone: 'Zone 7' }
+    { name: 'United Arab Emirates', code: 'AE', dhlZone: 'Zone 1', aramexZone: 'Zone 1' },
+    { name: 'Saudi Arabia', code: 'SA', dhlZone: 'Zone 4', aramexZone: 'Zone 4' },
+    { name: 'United States', code: 'US', dhlZone: 'Zone 8', aramexZone: 'Zone 8' },
+    { name: 'Canada', code: 'CA', dhlZone: 'Zone 8', aramexZone: 'Zone 8' },
+    { name: 'United Kingdom', code: 'GB', dhlZone: 'Zone 7', aramexZone: 'Zone 7' },
+    { name: 'Australia', code: 'AU', dhlZone: 'Zone 6', aramexZone: 'Zone 6' },
+    { name: 'Germany', code: 'DE', dhlZone: 'Zone 7', aramexZone: 'Zone 7' },
+    { name: 'Singapore', code: 'SG', dhlZone: 'Zone 2', aramexZone: 'Zone 2' },
+    { name: 'Malaysia', code: 'MY', dhlZone: 'Zone 2', aramexZone: 'Zone 2' },
+    { name: 'Qatar', code: 'QA', dhlZone: 'Zone 4', aramexZone: 'Zone 4' },
+    { name: 'Oman', code: 'OM', dhlZone: 'Zone 4', aramexZone: 'Zone 4' },
+    { name: 'Kuwait', code: 'KW', dhlZone: 'Zone 4', aramexZone: 'Zone 4' },
+    { name: 'Bahrain', code: 'BH', dhlZone: 'Zone 4', aramexZone: 'Zone 4' },
+    { name: 'China', code: 'CN', dhlZone: 'Zone 3', aramexZone: 'Zone 3' },
+    { name: 'Japan', code: 'JP', dhlZone: 'Zone 5', aramexZone: 'Zone 5' },
+    { name: 'France', code: 'FR', dhlZone: 'Zone 7', aramexZone: 'Zone 7' }
   ];
 
   function parseCSVLine(line) {
@@ -305,8 +315,11 @@
   function setupAutocomplete(list) {
     allCountriesList = list;
     list.forEach(c => {
-      globalCountryZoneMap[c.name.toLowerCase()] = c.zone;
-      globalCountryZoneMap[c.code.toLowerCase()] = c.zone;
+      globalCountryDHLMap[c.name.toLowerCase()] = c.dhlZone;
+      globalCountryDHLMap[c.code.toLowerCase()] = c.dhlZone;
+
+      globalCountryAramexMap[c.name.toLowerCase()] = c.aramexZone || c.dhlZone;
+      globalCountryAramexMap[c.code.toLowerCase()] = c.aramexZone || c.dhlZone;
     });
 
     const input = document.getElementById('countryInput');
@@ -350,13 +363,24 @@
     });
   }
 
+  async function fetchTabCSV(sheetGid) {
+    try {
+      const res = await fetch(`${SHEET_BASE}&gid=${sheetGid}&_cb=${Date.now()}`);
+      if (res.ok) {
+        const text = await res.text();
+        if (text && text.trim().length > 10) return text;
+      }
+    } catch (e) {}
+    return "";
+  }
+
   async function initCountries() {
     setupAutocomplete(defaultCountries);
 
     try {
-      const response = await fetch(SHEET1_BASE + '&gid=0');
-      if (!response.ok) return;
-      const csvText = await response.text();
+      const csvText = await fetchTabCSV(GIDS.COUNTRY_ZONES);
+      if(!csvText) return;
+      
       const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
 
       let fetchedList = [];
@@ -364,7 +388,12 @@
         if (idx === 0) return;
         const parts = parseCSVLine(line);
         if (parts.length >= 3 && parts[1] && parts[2]) {
-          fetchedList.push({ name: parts[1], code: parts[0], zone: parts[2] });
+          fetchedList.push({ 
+            name: parts[1], 
+            code: parts[0], 
+            dhlZone: parts[2],
+            aramexZone: parts[3] ? parts[3] : parts[2] // Col D for Aramex Zone
+          });
         }
       });
 
@@ -374,20 +403,29 @@
     }
   }
 
-  // Parse Rate Helper
-  function processRateFromCSV(rulesCsv, ratesCsv, carrierName, userZoneRaw, chargeableWt) {
-    let fuelSurchargePct = 25;
-    let profitMarginPct = 15;
+  // Universal Rate Calculator (DHL & Aramex Rules Supported)
+  function processCarrierCalculation(rulesCsv, ratesCsv, carrierName, userZoneRaw, chargeableWt) {
+    if(!ratesCsv || ratesCsv.trim().length < 10) return null;
+
+    let fsPct = 25;
+    let profitPct = 15;
     let gstPct = 18;
+    let esPct = 0;
+    let essPerKg = 0;
 
     rulesCsv.split(/\r?\n/).forEach(line => {
       const p = parseCSVLine(line);
       const code = (p[0] || '').trim().toUpperCase();
       const valStr = (p[3] !== undefined && p[3] !== '') ? p[3].trim() : (p[1] !== undefined ? p[1].trim() : '');
+      const val = parseFloat(valStr);
 
-      if (code === 'FS' && valStr !== '') fuelSurchargePct = parseFloat(valStr) || 25;
-      if (code === 'PROFIT' && valStr !== '') profitMarginPct = parseFloat(valStr) || 15;
-      if (code === 'GST' && valStr !== '') gstPct = parseFloat(valStr) || 18;
+      if (!isNaN(val)) {
+        if (code === 'FS') fsPct = val;
+        if (code === 'PROFIT') profitPct = val;
+        if (code === 'GST') gstPct = val;
+        if (code === 'ES') esPct = val;
+        if (code === 'ESS') essPerKg = val;
+      }
     });
 
     const lines = ratesCsv.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
@@ -398,7 +436,7 @@
 
     for (let col = 0; col < headerParts.length; col++) {
       const hClean = headerParts[col].toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (hClean === `zone${targetZoneNum}`) {
+      if (hClean === `zone${targetZoneNum}` || hClean === userZoneRaw.toLowerCase().replace(/[^a-z0-9]/g, '')) {
         zoneColIndex = col;
         break;
       }
@@ -416,17 +454,31 @@
 
       const wt = parseFloat(parts[0]);
       const rateVal = parseFloat(parts[zoneColIndex]);
+      const type = parts[parts.length - 1] ? parts[parts.length - 1].toUpperCase() : 'FLAT';
 
       if (!isNaN(wt) && !isNaN(rateVal)) {
-        if (chargeableWt <= wt) {
-          baseFreight = rateVal;
-          break;
+        if (type.includes('PER_KG') || parts[0].includes('.1')) {
+          if (chargeableWt >= wt) {
+            baseFreight = chargeableWt * rateVal;
+          }
+        } else {
+          if (chargeableWt <= wt) {
+            baseFreight = rateVal;
+            break;
+          }
         }
       }
     }
 
-    const totalCarrierCost = baseFreight * (1 + (fuelSurchargePct / 100));
-    const sellingSubtotal = totalCarrierCost * (1 + (profitMarginPct / 100));
+    if (baseFreight === 0) return null;
+
+    // Surcharges
+    const esCost = baseFreight * (esPct / 100);
+    const fsCost = baseFreight * (fsPct / 100);
+    const essCost = chargeableWt * essPerKg;
+
+    const totalCarrierCost = baseFreight + esCost + fsCost + essCost;
+    const sellingSubtotal = totalCarrierCost * (1 + (profitPct / 100));
     const gstAmount = (sellingSubtotal * gstPct) / 100;
     const grandTotal = sellingSubtotal + gstAmount;
 
@@ -470,24 +522,24 @@
     const volWt = ((l * w * h) / 5000) * cartons;
     const chargeableWt = Math.max(grossWt, volWt);
 
-    const userZoneRaw = globalCountryZoneMap[toCountry.toLowerCase()] || 'Zone 10';
+    const dhlZoneRaw = globalCountryDHLMap[toCountry.toLowerCase()] || 'Zone 10';
+    const aramexZoneRaw = globalCountryAramexMap[toCountry.toLowerCase()] || dhlZoneRaw;
 
     try {
-      // Fetch Rules, Base_Rates (Acc 1), and Base_Rates_2 (Acc 2) from Sheet 1
-      const [rulesRes, rates1Res, rates2Res] = await Promise.all([
-        fetch(SHEET1_BASE + '&gid=1402919501&_t=' + Date.now()),  // Rules_Addons
-        fetch(SHEET1_BASE + '&gid=197215827&_t=' + Date.now()),   // Base_Rates (Account 1)
-        fetch(SHEET1_BASE + '&gid=1518997283&_t=' + Date.now())  // Base_Rates_2 (Account 2 GID: 1518997283)
+      // Fetch Rules and Rates in Parallel
+      const [dhlRulesCsv, dhl1Csv, dhl2Csv] = await Promise.all([
+        fetchTabCSV(GIDS.DHL_RULES),
+        fetchTabCSV(GIDS.DHL1_RATES),
+        fetchTabCSV(GIDS.DHL2_RATES)
       ]);
 
-      const rulesCsv = await rulesRes.text();
-      const rates1Csv = await rates1Res.text();
-      const rates2Csv = await rates2Res.text();
+      const dhl1Rate = processCarrierCalculation(dhlRulesCsv, dhl1Csv, 'DHL Express (Account 1)', dhlZoneRaw, chargeableWt);
+      const dhl2Rate = processCarrierCalculation(dhlRulesCsv, dhl2Csv, 'DHL Express (Account 2)', dhlZoneRaw, chargeableWt);
 
-      const dhl1Rate = processRateFromCSV(rulesCsv, rates1Csv, 'DHL Express (Account 1)', userZoneRaw, chargeableWt);
-      const dhl2Rate = processRateFromCSV(rulesCsv, rates2Csv, 'DHL Express (Account 2)', userZoneRaw, chargeableWt);
+      let results = [];
+      if (dhl1Rate) results.push(dhl1Rate);
+      if (dhl2Rate) results.push(dhl2Rate);
 
-      const results = [dhl1Rate, dhl2Rate];
       results.sort((a, b) => a.grandTotal - b.grandTotal);
 
       document.getElementById('loader').style.display = 'none';
@@ -504,7 +556,7 @@
               <span class="badge">Live</span> 
               ${isBest ? '<span class="cheapest-tag">Best Price</span>' : ''}
             </td>
-            <td>${fromCountry} ➔ ${toCountry} (${userZoneRaw})</td>
+            <td>${fromCountry} ➔ ${toCountry} (${dhlZoneRaw})</td>
             <td>3-5 Days</td>
             <td>${fmt(res.subtotal)}</td>
             <td style="color: #dc2626; font-weight: 700;">+ ${fmt(res.gstAmount)} (${res.gstPct}%)</td>
