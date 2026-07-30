@@ -261,11 +261,15 @@
 </div>
 
 <script>
-  // DHL Account 1 Published Sheet
-  const DHL1_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?single=true&output=csv';
+  // Direct Tab CSV Exports for Sheet 1 (DHL Express Account 1)
+  const DHL1_ZONES  = 'https://docs.google.com/spreadsheets/d/1VUF4UxBlyCUIlezfClDRTD6jEKxObWDtWHf5VRv-Mso/export?format=csv&gid=0';
+  const DHL1_RATES  = 'https://docs.google.com/spreadsheets/d/1VUF4UxBlyCUIlezfClDRTD6jEKxObWDtWHf5VRv-Mso/export?format=csv&gid=197215827';
+  const DHL1_RULES  = 'https://docs.google.com/spreadsheets/d/1VUF4UxBlyCUIlezfClDRTD6jEKxObWDtWHf5VRv-Mso/export?format=csv&gid=1402919501';
 
-  // DHL Account 2 Published Sheet (Corrected URL)
-  const DHL2_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?single=true&output=csv';
+  // Direct Tab CSV Exports for Sheet 2 (DHL Express Account 2)
+  const DHL2_ZONES  = 'https://docs.google.com/spreadsheets/d/1SwIBq5IwPJA6nPOCgffCVTOjWM0wip7fhCPgoEPiwF8/export?format=csv&gid=0';
+  const DHL2_RATES  = 'https://docs.google.com/spreadsheets/d/1SwIBq5IwPJA6nPOCgffCVTOjWM0wip7fhCPgoEPiwF8/export?format=csv&gid=197215827';
+  const DHL2_RULES  = 'https://docs.google.com/spreadsheets/d/1SwIBq5IwPJA6nPOCgffCVTOjWM0wip7fhCPgoEPiwF8/export?format=csv&gid=1402919501';
 
   let globalCountryZoneMap = {};
   let allCountriesList = [];
@@ -360,7 +364,7 @@
     setupAutocomplete(defaultCountries);
 
     try {
-      const response = await fetch(DHL1_BASE_URL + '&gid=0');
+      const response = await fetch(DHL1_ZONES);
       if (!response.ok) return;
       const csvText = await response.text();
       const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -380,13 +384,13 @@
     }
   }
 
-  // Robust Sheet Calculator
-  async function fetchCarrierRate(baseUrl, carrierName, userZoneRaw, chargeableWt) {
+  // Exact Single Carrier Rates Extractor
+  async function fetchCarrierRate(rulesUrl, ratesUrl, carrierName, userZoneRaw, chargeableWt) {
     const zoneColIndex = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
 
     const [rulesRes, ratesRes] = await Promise.all([
-      fetch(`${baseUrl}&gid=1402919501&t=${Date.now()}`),
-      fetch(`${baseUrl}&gid=197215827&t=${Date.now()}`)
+      fetch(`${rulesUrl}&t=${Date.now()}`),
+      fetch(`${ratesUrl}&t=${Date.now()}`)
     ]);
 
     const rulesCsv = await rulesRes.text();
@@ -480,8 +484,8 @@
 
     try {
       const [dhl1Rate, dhl2Rate] = await Promise.all([
-        fetchCarrierRate(DHL1_BASE_URL, 'DHL Express (Account 1)', userZoneRaw, chargeableWt),
-        fetchCarrierRate(DHL2_BASE_URL, 'DHL Express (Account 2)', userZoneRaw, chargeableWt)
+        fetchCarrierRate(DHL1_RULES, DHL1_RATES, 'DHL Express (Account 1)', userZoneRaw, chargeableWt),
+        fetchCarrierRate(DHL2_RULES, DHL2_RATES, 'DHL Express (Account 2)', userZoneRaw, chargeableWt)
       ]);
 
       const results = [dhl1Rate, dhl2Rate];
