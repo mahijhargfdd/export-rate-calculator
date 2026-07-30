@@ -199,7 +199,7 @@
           <th>Route & Zone</th>
           <th>ETA</th>
           <th>Subtotal</th>
-          <th>GST (18%)</th>
+          <th id="gstHeaderLabel">GST</th>
           <th>Final Total</th>
         </tr>
       </thead>
@@ -224,7 +224,7 @@
         <i class="fa-brands fa-whatsapp" style="font-size: 18px;"></i> Chat on WhatsApp (+91 77238 37272)
       </a>
       <a href="mailto:courierbirdshipping@gmail.com?subject=International%20Shipping%20Inquiry" class="btn-contact btn-email">
-        <i class="fa-regular fa-envelope" style="font-size: 14px;"></i> Email Support
+        <i class="fa-regular fa-envelope" style="font-size: 16px;"></i> Email Support
       </a>
     </div>
   </div>
@@ -232,7 +232,7 @@
 </div>
 
 <script>
-  // Robust Base Published URLs
+  // Published Google Sheet Base URLs
   const BASE_PUB_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?single=true&output=csv';
 
   const URL_COUNTRY_ZONES = BASE_PUB_URL + '&gid=0';
@@ -352,23 +352,36 @@
 
     try {
       const [rulesRes, ratesRes] = await Promise.all([
-        fetch(URL_RULES_ADDONS),
-        fetch(URL_BASE_RATES)
+        fetch(URL_RULES_ADDONS + '&t=' + Date.now()),
+        fetch(URL_BASE_RATES + '&t=' + Date.now())
       ]);
 
       const rulesCsv = await rulesRes.text();
       const ratesCsv = await ratesRes.text();
 
-      let fuelSurchargePct = 25;
-      let profitMarginPct = 0; // Default 0
-      let gstPct = 18;
+      // Dynamic Rule Extractor (Strict Sheet Values)
+      let fuelSurchargePct = 0;
+      let profitMarginPct = 0;
+      let gstPct = 0;
 
       rulesCsv.split('\n').forEach(line => {
         const p = parseCSVLine(line);
-        if (p[0] === 'FS' && p[3] !== undefined && p[3] !== '') fuelSurchargePct = parseFloat(p[3]);
-        if (p[0] === 'PROFIT' && p[3] !== undefined && p[3] !== '') profitMarginPct = parseFloat(p[3]);
-        if (p[0] === 'GST' && p[3] !== undefined && p[3] !== '') gstPct = parseFloat(p[3]);
+        const code = (p[0] || '').trim().toUpperCase();
+        const valStr = (p[3] !== undefined) ? p[3].trim() : '';
+
+        if (code === 'FS' && valStr !== '') {
+          fuelSurchargePct = parseFloat(valStr) || 0;
+        }
+        if (code === 'PROFIT' && valStr !== '') {
+          profitMarginPct = parseFloat(valStr) || 0;
+        }
+        if (code === 'GST' && valStr !== '') {
+          gstPct = parseFloat(valStr) || 0;
+        }
       });
+
+      // Update Table Header to Match Exact Sheet GST %
+      document.getElementById('gstHeaderLabel').innerText = `GST (${gstPct}%)`;
 
       const lines = ratesCsv.split('\n').map(l => l.trim()).filter(l => l.length > 0);
       let baseFreight = 0;
@@ -395,6 +408,7 @@
 
       if (baseFreight === 0) baseFreight = chargeableWt * 750;
 
+      // 100% Dynamic Math
       const totalCarrierCost = baseFreight * (1 + (fuelSurchargePct / 100));
       const sellingSubtotal = totalCarrierCost * (1 + (profitMarginPct / 100));
       const gstAmount = (sellingSubtotal * gstPct) / 100;
