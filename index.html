@@ -258,7 +258,7 @@
 </div>
 
 <script>
-  // Direct Sheet Links
+  // Live Published Sheets
   const DHL1_ZONES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=0&single=true&output=csv';
   const DHL1_RATES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=197215827&single=true&output=csv';
   const DHL1_RULES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=1402919501&single=true&output=csv';
@@ -389,37 +389,38 @@
     const rulesCsv = await rulesRes.text();
     const ratesCsv = await ratesRes.text();
 
-    let fuelSurchargePct = 25;
-    let profitMarginPct = 15;
-    let gstPct = 18;
+    let fuelSurchargePct = 25; // Default from sheet
+    let profitMarginPct = 15;  // Default from sheet
+    let gstPct = 18;           // Default from sheet
 
     rulesCsv.split(/\r?\n/).forEach(line => {
       const p = parseCSVLine(line);
       const code = (p[0] || '').trim().toUpperCase();
-      const valStr = (p[3] !== undefined) ? p[3].trim() : '';
+      const valStr = (p[3] !== undefined && p[3] !== '') ? p[3].trim() : (p[1] !== undefined ? p[1].trim() : '');
 
-      if (code === 'FS' && valStr !== '') fuelSurchargePct = parseFloat(valStr);
-      if (code === 'PROFIT' && valStr !== '') profitMarginPct = parseFloat(valStr);
-      if (code === 'GST' && valStr !== '') gstPct = parseFloat(valStr);
+      if (code === 'FS' && valStr !== '') fuelSurchargePct = parseFloat(valStr) || fuelSurchargePct;
+      if (code === 'PROFIT' && valStr !== '') profitMarginPct = parseFloat(valStr) || profitMarginPct;
+      if (code === 'GST' && valStr !== '') gstPct = parseFloat(valStr) || gstPct;
     });
 
     const lines = ratesCsv.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
     const headerParts = parseCSVLine(lines[0]);
 
-    // Robust Header Matching
+    // Exact Zone Column Search
+    const targetZoneNum = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
     let zoneColIndex = -1;
-    const targetNum = parseInt(userZoneRaw.replace(/[^0-9]/g, ''));
 
     for (let col = 0; col < headerParts.length; col++) {
       const hClean = headerParts[col].toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (hClean === `zone${targetNum}`) {
+      if (hClean === `zone${targetZoneNum}`) {
         zoneColIndex = col;
         break;
       }
     }
 
+    // Direct Col Mapping Fallback (Weight = Col 0, Zone 1 = Col 1, Zone 4 = Col 4)
     if (zoneColIndex === -1) {
-      zoneColIndex = targetNum; // Direct Column Index fallback
+      zoneColIndex = targetZoneNum;
     }
 
     let baseFreight = 0;
