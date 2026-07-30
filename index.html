@@ -258,12 +258,11 @@
 </div>
 
 <script>
-  // DHL Account 1 Exact Published Links
+  // Direct Sheet Links
   const DHL1_ZONES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=0&single=true&output=csv';
   const DHL1_RATES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=197215827&single=true&output=csv';
   const DHL1_RULES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=1402919501&single=true&output=csv';
 
-  // DHL Account 2 Exact Published Links
   const DHL2_ZONES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=0&single=true&output=csv';
   const DHL2_RATES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=197215827&single=true&output=csv';
   const DHL2_RULES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=1402919501&single=true&output=csv';
@@ -361,10 +360,10 @@
     setupAutocomplete(defaultCountries);
 
     try {
-      const response = await fetch(DHL1_ZONES);
+      const response = await fetch(DHL1_ZONES + '&cache=' + Date.now());
       if (!response.ok) return;
       const csvText = await response.text();
-      const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
 
       let fetchedList = [];
       lines.forEach((line, idx) => {
@@ -390,49 +389,51 @@
     const rulesCsv = await rulesRes.text();
     const ratesCsv = await ratesRes.text();
 
-    let fuelSurchargePct = 0;
-    let profitMarginPct = 0;
-    let gstPct = 0;
+    let fuelSurchargePct = 25;
+    let profitMarginPct = 15;
+    let gstPct = 18;
 
-    rulesCsv.split('\n').forEach(line => {
+    rulesCsv.split(/\r?\n/).forEach(line => {
       const p = parseCSVLine(line);
       const code = (p[0] || '').trim().toUpperCase();
       const valStr = (p[3] !== undefined) ? p[3].trim() : '';
 
-      if (code === 'FS' && valStr !== '') fuelSurchargePct = parseFloat(valStr) || 0;
-      if (code === 'PROFIT' && valStr !== '') profitMarginPct = parseFloat(valStr) || 0;
-      if (code === 'GST' && valStr !== '') gstPct = parseFloat(valStr) || 0;
+      if (code === 'FS' && valStr !== '') fuelSurchargePct = parseFloat(valStr);
+      if (code === 'PROFIT' && valStr !== '') profitMarginPct = parseFloat(valStr);
+      if (code === 'GST' && valStr !== '') gstPct = parseFloat(valStr);
     });
 
-    const lines = ratesCsv.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const lines = ratesCsv.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
     const headerParts = parseCSVLine(lines[0]);
 
-    // Exact Header Match (Matches "Zone 4" to correct Column)
+    // Robust Header Matching
     let zoneColIndex = -1;
-    const targetZoneClean = userZoneRaw.toLowerCase().replace(/\s+/g, '');
+    const targetNum = parseInt(userZoneRaw.replace(/[^0-9]/g, ''));
 
     for (let col = 0; col < headerParts.length; col++) {
-      const headerClean = headerParts[col].toLowerCase().replace(/\s+/g, '');
-      if (headerClean === targetZoneClean) {
+      const hClean = headerParts[col].toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (hClean === `zone${targetNum}`) {
         zoneColIndex = col;
         break;
       }
     }
 
     if (zoneColIndex === -1) {
-      zoneColIndex = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
+      zoneColIndex = targetNum; // Direct Column Index fallback
     }
 
     let baseFreight = 0;
 
     for (let i = 1; i < lines.length; i++) {
       const parts = parseCSVLine(lines[i]);
+      if (!parts[0]) continue;
+
       const wt = parseFloat(parts[0]);
       const rateVal = parseFloat(parts[zoneColIndex]);
-      const type = parts[parts.length - 1] || 'FLAT';
+      const type = parts[parts.length - 1] ? parts[parts.length - 1].toUpperCase() : 'FLAT';
 
       if (!isNaN(wt) && !isNaN(rateVal)) {
-        if (type.includes('PER_KG') || parts[0].includes('30.1') || parts[0].includes('70.1') || parts[0].includes('300.1')) {
+        if (type.includes('PER_KG') || parts[0].includes('.1')) {
           if (chargeableWt >= wt) {
             baseFreight = chargeableWt * rateVal;
           }
