@@ -261,12 +261,11 @@
 </div>
 
 <script>
-  // DHL Account 1 Published Tab Links
+  // Exact Published Tab URLs
   const DHL1_ZONES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=0&single=true&output=csv';
   const DHL1_RATES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=197215827&single=true&output=csv';
   const DHL1_RULES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?gid=1402919501&single=true&output=csv';
 
-  // DHL Account 2 Exact Published Tab Links
   const DHL2_ZONES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=0&single=true&output=csv';
   const DHL2_RATES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=197215827&single=true&output=csv';
   const DHL2_RULES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQF__ZiZ8cFSpE56keBbttDSIYJRXIB-ZOO8yVDQZS8t3qvXTpkShcVMjJV1ZDapD9cHa2VSAtL0JB/pub?gid=1402919501&single=true&output=csv';
@@ -410,6 +409,7 @@
     const lines = ratesCsv.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const headerParts = parseCSVLine(lines[0]);
 
+    // Exact Header Name Matching
     let zoneColIndex = -1;
     const targetZoneClean = userZoneRaw.toLowerCase().replace(/\s+/g, '');
     
@@ -422,7 +422,8 @@
     }
 
     if (zoneColIndex === -1) {
-      zoneColIndex = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
+      const numericPart = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
+      zoneColIndex = numericPart; // Fallback
     }
 
     let baseFreight = 0;
