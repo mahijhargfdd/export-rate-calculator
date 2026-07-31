@@ -403,32 +403,58 @@
     }
   }
 
-  // Exact Excel Calculation Engine
+  // Multi-Zone Aware Rules Extraction Function
+  function extractRulesForZone(rulesCsv, userZoneRaw) {
+    let rules = { fsPct: 29.75, profitPct: 0, gstPct: 18, esPct: 20, essPerKg: 131.1 };
+    if (!rulesCsv) return rules;
+
+    const lines = rulesCsv.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length === 0) return rules;
+
+    const headerParts = parseCSVLine(lines[0]);
+    const targetZoneNum = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
+
+    // Find column index for target Zone (e.g. Zone 1, Zone 2, Zone 7)
+    let zoneColIndex = -1;
+    for (let col = 0; col < headerParts.length; col++) {
+      const hClean = headerParts[col].toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (hClean === `zone${targetZoneNum}` || hClean === userZoneRaw.toLowerCase().replace(/[^a-z0-9]/g, '')) {
+        zoneColIndex = col;
+        break;
+      }
+    }
+
+    if (zoneColIndex === -1) {
+      zoneColIndex = 3 + targetZoneNum; // 0:Code, 1:Name, 2:Type, 3:ApplyOn, 4:Zone1, 5:Zone2...
+    }
+
+    lines.forEach((line, idx) => {
+      if (idx === 0) return;
+      const p = parseCSVLine(line);
+      const code = (p[0] || '').trim().toUpperCase();
+
+      let valStr = (p[zoneColIndex] !== undefined && p[zoneColIndex] !== '') ? p[zoneColIndex].trim() : 
+                     ((p[3] !== undefined && p[3] !== '') ? p[3].trim() : (p[1] !== undefined ? p[1].trim() : ''));
+      
+      const val = parseFloat(valStr.replace('%', ''));
+
+      if (!isNaN(val)) {
+        if (code === 'FS') rules.fsPct = val;
+        if (code === 'PROFIT') rules.profitPct = val;
+        if (code === 'GST') rules.gstPct = val;
+        if (code === 'ES') rules.esPct = val;
+        if (code === 'ESS') rules.essPerKg = val;
+      }
+    });
+
+    return rules;
+  }
+
+  // Exact Calculation Engine matching Excel Formulas
   function processCarrierCalculation(rulesCsv, ratesCsv, carrierName, userZoneRaw, chargeableWt, isAramex = false) {
     if(!userZoneRaw || userZoneRaw.trim() === '' || !ratesCsv || ratesCsv.trim().length < 10) return null;
 
-    let fsPct = 29.75;
-    let profitPct = 1;
-    let gstPct = 18;
-    let esPct = 20;
-    let essPerKg = 131.1;
-
-    if (rulesCsv) {
-      rulesCsv.split(/\r?\n/).forEach(line => {
-        const p = parseCSVLine(line);
-        const code = (p[0] || '').trim().toUpperCase();
-        const valStr = (p[3] !== undefined && p[3] !== '') ? p[3].trim() : (p[1] !== undefined ? p[1].trim() : '');
-        const val = parseFloat(valStr);
-
-        if (!isNaN(val)) {
-          if (code === 'FS') fsPct = val;
-          if (code === 'PROFIT') profitPct = val;
-          if (code === 'GST') gstPct = val;
-          if (code === 'ES') esPct = val;
-          if (code === 'ESS') essPerKg = val;
-        }
-      });
-    }
+    const rules = extractRulesForZone(rulesCsv, userZoneRaw);
 
     const lines = ratesCsv.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
     const headerParts = parseCSVLine(lines[0]);
@@ -477,33 +503,28 @@
     let totalCarrierCost = 0;
 
     if (isAramex) {
-      // Aramex Exact Excel Formula Logic:
-      // ESS = Weight * essPerKg
-      // ES = (Base + ESS) * (esPct / 100)
-      // FS = (Base + ESS + ES) * (fsPct / 100)
-      // Total Carrier Cost = Base + ESS + ES + FS
-      
-      const essValue = chargeableWt * essPerKg;
-      const esValue = (baseFreight + essValue) * (esPct / 100);
-      const fsValue = (baseFreight + essValue + esValue) * (fsPct / 100);
+      // Aramex Exact Excel Compound Math
+      const essValue = chargeableWt * rules.essPerKg;
+      const esValue = (baseFreight + essValue) * (rules.esPct / 100);
+      const fsValue = (baseFreight + essValue + esValue) * (rules.fsPct / 100);
       
       totalCarrierCost = baseFreight + essValue + esValue + fsValue;
     } else {
-      // DHL Additive Math
-      const fsCost = baseFreight * (fsPct / 100);
+      // DHL Math
+      const fsCost = baseFreight * (rules.fsPct / 100);
       totalCarrierCost = baseFreight + fsCost;
     }
 
     // Profit & GST Add-on
-    const sellingSubtotal = totalCarrierCost * (1 + (profitPct / 100));
-    const gstAmount = (sellingSubtotal * gstPct) / 100;
+    const sellingSubtotal = totalCarrierCost * (1 + (rules.profitPct / 100));
+    const gstAmount = (sellingSubtotal * rules.gstPct) / 100;
     const grandTotal = sellingSubtotal + gstAmount;
 
     return {
       carrierName,
       userZoneRaw,
       subtotal: sellingSubtotal,
-      gstPct,
+      gstPct: rules.gstPct,
       gstAmount,
       grandTotal
     };
