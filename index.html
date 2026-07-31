@@ -147,7 +147,6 @@
     .rate-table th, .rate-table td { padding: 14px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
     .rate-table th { background: #0f172a; color: #ffffff; font-weight: 700; font-size: 13px; text-transform: uppercase; }
     .price-text { font-size: 16px; font-weight: 800; color: #ea580c; }
-    .badge { background: #16a34a; color: white; padding: 4px 8px; border-radius: 20px; font-size: 11px; margin-left: 6px; font-weight: 700; }
     .cheapest-tag { background: #f97316; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-left: 6px; }
     .loader { display: none; text-align: center; color: #0f172a; font-weight: 700; margin-top: 20px; }
 
@@ -226,7 +225,6 @@
         <tr>
           <th>Carrier / Partner Account</th>
           <th>Route & Zone</th>
-          <th>ETA</th>
           <th>Subtotal</th>
           <th>GST</th>
           <th>Final Total</th>
@@ -251,7 +249,7 @@
         <i class="fa-brands fa-whatsapp" style="font-size: 18px;"></i> Chat on WhatsApp (+91 77238 37272)
       </a>
       <a href="mailto:courierbirdshipping@gmail.com?subject=International%20Shipping%20Inquiry" class="btn-contact btn-email">
-        <i class="fa-regular fa-envelope" style="font-size: 16px;"></i> Email Support
+        <i class="fa-regular fa-envelope" style="font-size: 14px;"></i> Email Support
       </a>
     </div>
   </div>
@@ -394,7 +392,7 @@
             name: parts[1], 
             code: parts[0], 
             dhlZone: parts[2],
-            aramexZone: (parts[3] !== undefined && parts[3] !== '') ? parts[3] : '' // Read Column D strictly
+            aramexZone: (parts[3] !== undefined && parts[3] !== '') ? parts[3] : ''
           });
         }
       });
@@ -540,8 +538,6 @@
 
       const dhl1Rate = processCarrierCalculation(dhlRulesCsv, dhl1Csv, 'DHL Express (Account 1)', dhlZoneRaw, chargeableWt);
       const dhl2Rate = processCarrierCalculation(dhlRulesCsv, dhl2Csv, 'DHL Express (Account 2)', dhlZoneRaw, chargeableWt);
-      
-      // Calculate Aramex only if Aramex Zone exists for the selected country
       const aramexRate = aramexZoneRaw ? processCarrierCalculation(aramexRulesCsv, aramexCsv, 'Aramex Express', aramexZoneRaw, chargeableWt) : null;
 
       let results = [];
@@ -562,11 +558,9 @@
           <tr>
             <td>
               <strong>${res.carrierName}</strong> 
-              <span class="badge">Live</span> 
               ${isBest ? '<span class="cheapest-tag">Best Price</span>' : ''}
             </td>
             <td>${fromCountry} ➔ ${toCountry} (${res.userZoneRaw})</td>
-            <td>3-5 Days</td>
             <td>${fmt(res.subtotal)}</td>
             <td style="color: #dc2626; font-weight: 700;">+ ${fmt(res.gstAmount)} (${res.gstPct}%)</td>
             <td class="price-text">${fmt(res.grandTotal)}</td>
