@@ -250,7 +250,7 @@
         <i class="fa-brands fa-whatsapp" style="font-size: 18px;"></i> Chat on WhatsApp (+91 77238 37272)
       </a>
       <a href="mailto:courierbirdshipping@gmail.com?subject=International%20Shipping%20Inquiry" class="btn-contact btn-email">
-        <i class="fa-regular fa-envelope" style="font-size: 14px;"></i> Email Support
+        <i class="fa-regular fa-envelope" style="font-size: 16px;"></i> Email Support
       </a>
     </div>
   </div>
@@ -281,20 +281,20 @@
 
   const defaultCountries = [
     { name: 'United Arab Emirates', code: 'AE', dhlZone: 'Zone 1', aramexZone: 'Zone 1', shipglobalZone: 'Zone 25' },
-    { name: 'Saudi Arabia', code: 'SA', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: 'Zone 4' },
+    { name: 'Saudi Arabia', code: 'SA', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: '' },
     { name: 'United States', code: 'US', dhlZone: 'Zone 8', aramexZone: 'Zone 8', shipglobalZone: 'Zone 1' },
     { name: 'Canada', code: 'CA', dhlZone: 'Zone 8', aramexZone: 'Zone 8', shipglobalZone: 'Zone 1' },
     { name: 'United Kingdom', code: 'GB', dhlZone: 'Zone 7', aramexZone: 'Zone 7', shipglobalZone: 'Zone 7' },
     { name: 'Australia', code: 'AU', dhlZone: 'Zone 6', aramexZone: 'Zone 7', shipglobalZone: 'Zone 6' },
     { name: 'Germany', code: 'DE', dhlZone: 'Zone 7', aramexZone: 'Zone 7', shipglobalZone: 'Zone 10' },
     { name: 'Singapore', code: 'SG', dhlZone: 'Zone 2', aramexZone: 'Zone 5', shipglobalZone: 'Zone 26' },
-    { name: 'Malaysia', code: 'MY', dhlZone: 'Zone 2', aramexZone: 'Zone 2', shipglobalZone: 'Zone 2' },
-    { name: 'Qatar', code: 'QA', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: 'Zone 4' },
-    { name: 'Oman', code: 'OM', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: 'Zone 4' },
-    { name: 'Kuwait', code: 'KW', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: 'Zone 4' },
-    { name: 'Bahrain', code: 'BH', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: 'Zone 4' },
-    { name: 'China', code: 'CN', dhlZone: 'Zone 3', aramexZone: 'Zone 3', shipglobalZone: 'Zone 3' },
-    { name: 'Japan', code: 'JP', dhlZone: 'Zone 5', aramexZone: 'Zone 5', shipglobalZone: 'Zone 5' },
+    { name: 'Malaysia', code: 'MY', dhlZone: 'Zone 2', aramexZone: 'Zone 2', shipglobalZone: '' },
+    { name: 'Qatar', code: 'QA', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: '' },
+    { name: 'Oman', code: 'OM', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: '' },
+    { name: 'Kuwait', code: 'KW', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: '' },
+    { name: 'Bahrain', code: 'BH', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: '' },
+    { name: 'China', code: 'CN', dhlZone: 'Zone 3', aramexZone: 'Zone 3', shipglobalZone: '' },
+    { name: 'Japan', code: 'JP', dhlZone: 'Zone 5', aramexZone: 'Zone 5', shipglobalZone: '' },
     { name: 'France', code: 'FR', dhlZone: 'Zone 7', aramexZone: 'Zone 7', shipglobalZone: 'Zone 11' }
   ];
 
@@ -326,8 +326,8 @@
       globalCountryAramexMap[c.name.toLowerCase()] = c.aramexZone || '';
       globalCountryAramexMap[c.code.toLowerCase()] = c.aramexZone || '';
 
-      globalCountryShipGlobalMap[c.name.toLowerCase()] = c.shipglobalZone || c.dhlZone;
-      globalCountryShipGlobalMap[c.code.toLowerCase()] = c.shipglobalZone || c.dhlZone;
+      globalCountryShipGlobalMap[c.name.toLowerCase()] = c.shipglobalZone || '';
+      globalCountryShipGlobalMap[c.code.toLowerCase()] = c.shipglobalZone || '';
     });
 
     const input = document.getElementById('countryInput');
@@ -402,7 +402,7 @@
             code: parts[0], 
             dhlZone: parts[2],
             aramexZone: (parts[3] !== undefined && parts[3] !== '') ? parts[3] : '',
-            shipglobalZone: (parts[4] !== undefined && parts[4] !== '') ? parts[4] : parts[2]
+            shipglobalZone: (parts[4] !== undefined && parts[4] !== '') ? parts[4] : ''
           });
         }
       });
@@ -596,10 +596,11 @@
       const dhl1Rate = processCarrierCalculation(dhlRulesCsv, dhl1Csv, 'DHL Express (Account 1)', dhlZoneRaw, chargeableWt, 'standard');
       const dhl2Rate = processCarrierCalculation(dhlRulesCsv, dhl2Csv, 'DHL Express (Account 2)', dhlZoneRaw, chargeableWt, 'standard');
       
-      const aramex1Rate = aramexZoneRaw ? processCarrierCalculation(aramexRules1Csv, aramexCsv, 'Aramex Express (Account 1)', aramexZoneRaw, chargeableWt, 'aramex') : null;
-      const aramex2Rate = aramexZoneRaw ? processCarrierCalculation(aramexRules2Csv, aramexCsv, 'Aramex Express (Account 2)', aramexZoneRaw, chargeableWt, 'aramex') : null;
+      const aramex1Rate = (aramexZoneRaw && aramexZoneRaw.trim() !== '') ? processCarrierCalculation(aramexRules1Csv, aramexCsv, 'Aramex Express (Account 1)', aramexZoneRaw, chargeableWt, 'aramex') : null;
+      const aramex2Rate = (aramexZoneRaw && aramexZoneRaw.trim() !== '') ? processCarrierCalculation(aramexRules2Csv, aramexCsv, 'Aramex Express (Account 2)', aramexZoneRaw, chargeableWt, 'aramex') : null;
 
-      const shipglobalRate = shipglobalZoneRaw ? processCarrierCalculation(sgRulesCsv, sgCsv, 'ShipGlobal Direct', shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
+      // ShipGlobal is STRICTLY calculated ONLY if shipglobalZoneRaw is NOT empty/blank!
+      const shipglobalRate = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgRulesCsv, sgCsv, 'ShipGlobal Direct', shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
 
       let results = [];
       if (dhl1Rate) results.push(dhl1Rate);
