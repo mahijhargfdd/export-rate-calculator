@@ -249,7 +249,7 @@
         <i class="fa-brands fa-whatsapp" style="font-size: 18px;"></i> Chat on WhatsApp (+91 77238 37272)
       </a>
       <a href="mailto:courierbirdshipping@gmail.com?subject=International%20Shipping%20Inquiry" class="btn-contact btn-email">
-        <i class="fa-regular fa-envelope" style="font-size: 16px;"></i> Email Support
+        <i class="fa-regular fa-envelope" style="font-size: 14px;"></i> Email Support
       </a>
     </div>
   </div>
@@ -260,14 +260,15 @@
   // Central Sheet Base URL
   const SHEET_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?single=true&output=csv';
 
-  // Exact GIDs for all tabs
+  // Exact GIDs mapped to Google Sheets
   const GIDS = {
     COUNTRY_ZONES: 0,
     DHL1_RATES: 197215827,
     DHL2_RATES: 1518997283,
     DHL_RULES: 1402919501,
     ARAMEX_RATES: 1867409658,
-    ARAMEX_RULES: 425772554
+    ARAMEX_RULES_1: 425772554,
+    ARAMEX_RULES_2: 1093725141 // Exact GID from screenshot!
   };
 
   let globalCountryDHLMap = {};
@@ -364,6 +365,7 @@
   }
 
   async function fetchTabCSV(sheetGid) {
+    if(sheetGid === undefined || sheetGid === null) return "";
     try {
       const res = await fetch(`${SHEET_BASE}&gid=${sheetGid}&_cb=${Date.now()}`);
       if (res.ok) {
@@ -403,7 +405,6 @@
     }
   }
 
-  // Multi-Zone Aware Rules Extraction Function
   function extractRulesForZone(rulesCsv, userZoneRaw) {
     let rules = { fsPct: 29.75, profitPct: 0, gstPct: 18, esPct: 20, essPerKg: 131.1 };
     if (!rulesCsv) return rules;
@@ -414,7 +415,6 @@
     const headerParts = parseCSVLine(lines[0]);
     const targetZoneNum = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
 
-    // Find column index for target Zone (e.g. Zone 1, Zone 2, Zone 7)
     let zoneColIndex = -1;
     for (let col = 0; col < headerParts.length; col++) {
       const hClean = headerParts[col].toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -425,7 +425,7 @@
     }
 
     if (zoneColIndex === -1) {
-      zoneColIndex = 3 + targetZoneNum; // 0:Code, 1:Name, 2:Type, 3:ApplyOn, 4:Zone1, 5:Zone2...
+      zoneColIndex = 3 + targetZoneNum;
     }
 
     lines.forEach((line, idx) => {
@@ -450,7 +450,6 @@
     return rules;
   }
 
-  // Exact Calculation Engine matching Excel Formulas
   function processCarrierCalculation(rulesCsv, ratesCsv, carrierName, userZoneRaw, chargeableWt, isAramex = false) {
     if(!userZoneRaw || userZoneRaw.trim() === '' || !ratesCsv || ratesCsv.trim().length < 10) return null;
 
@@ -503,19 +502,16 @@
     let totalCarrierCost = 0;
 
     if (isAramex) {
-      // Aramex Exact Excel Compound Math
       const essValue = chargeableWt * rules.essPerKg;
       const esValue = (baseFreight + essValue) * (rules.esPct / 100);
       const fsValue = (baseFreight + essValue + esValue) * (rules.fsPct / 100);
       
       totalCarrierCost = baseFreight + essValue + esValue + fsValue;
     } else {
-      // DHL Math
       const fsCost = baseFreight * (rules.fsPct / 100);
       totalCarrierCost = baseFreight + fsCost;
     }
 
-    // Profit & GST Add-on
     const sellingSubtotal = totalCarrierCost * (1 + (rules.profitPct / 100));
     const gstAmount = (sellingSubtotal * rules.gstPct) / 100;
     const grandTotal = sellingSubtotal + gstAmount;
@@ -565,22 +561,27 @@
     const aramexZoneRaw = globalCountryAramexMap[toCountry.toLowerCase()];
 
     try {
-      const [dhlRulesCsv, dhl1Csv, dhl2Csv, aramexRulesCsv, aramexCsv] = await Promise.all([
+      const [dhlRulesCsv, dhl1Csv, dhl2Csv, aramexRules1Csv, aramexRules2Csv, aramexCsv] = await Promise.all([
         fetchTabCSV(GIDS.DHL_RULES),
         fetchTabCSV(GIDS.DHL1_RATES),
         fetchTabCSV(GIDS.DHL2_RATES),
-        fetchTabCSV(GIDS.ARAMEX_RULES),
+        fetchTabCSV(GIDS.ARAMEX_RULES_1),
+        fetchTabCSV(GIDS.ARAMEX_RULES_2),
         fetchTabCSV(GIDS.ARAMEX_RATES)
       ]);
 
       const dhl1Rate = processCarrierCalculation(dhlRulesCsv, dhl1Csv, 'DHL Express (Account 1)', dhlZoneRaw, chargeableWt, false);
       const dhl2Rate = processCarrierCalculation(dhlRulesCsv, dhl2Csv, 'DHL Express (Account 2)', dhlZoneRaw, chargeableWt, false);
-      const aramexRate = aramexZoneRaw ? processCarrierCalculation(aramexRulesCsv, aramexCsv, 'Aramex Express', aramexZoneRaw, chargeableWt, true) : null;
+      
+      // Calculate Aramex Account 1 & Account 2 using their respective Rules/Addons tabs
+      const aramex1Rate = aramexZoneRaw ? processCarrierCalculation(aramexRules1Csv, aramexCsv, 'Aramex Express (Account 1)', aramexZoneRaw, chargeableWt, true) : null;
+      const aramex2Rate = aramexZoneRaw ? processCarrierCalculation(aramexRules2Csv, aramexCsv, 'Aramex Express (Account 2)', aramexZoneRaw, chargeableWt, true) : null;
 
       let results = [];
       if (dhl1Rate) results.push(dhl1Rate);
       if (dhl2Rate) results.push(dhl2Rate);
-      if (aramexRate) results.push(aramexRate);
+      if (aramex1Rate) results.push(aramex1Rate);
+      if (aramex2Rate) results.push(aramex2Rate);
 
       results.sort((a, b) => a.grandTotal - b.grandTotal);
 
