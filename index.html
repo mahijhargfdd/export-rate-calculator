@@ -280,9 +280,9 @@
     { name: 'United States', code: 'US', dhlZone: 'Zone 8', aramexZone: 'Zone 8' },
     { name: 'Canada', code: 'CA', dhlZone: 'Zone 8', aramexZone: 'Zone 8' },
     { name: 'United Kingdom', code: 'GB', dhlZone: 'Zone 7', aramexZone: 'Zone 7' },
-    { name: 'Australia', code: 'AU', dhlZone: 'Zone 6', aramexZone: 'Zone 6' },
+    { name: 'Australia', code: 'AU', dhlZone: 'Zone 6', aramexZone: 'Zone 7' },
     { name: 'Germany', code: 'DE', dhlZone: 'Zone 7', aramexZone: 'Zone 7' },
-    { name: 'Singapore', code: 'SG', dhlZone: 'Zone 2', aramexZone: 'Zone 2' },
+    { name: 'Singapore', code: 'SG', dhlZone: 'Zone 2', aramexZone: 'Zone 5' },
     { name: 'Malaysia', code: 'MY', dhlZone: 'Zone 2', aramexZone: 'Zone 2' },
     { name: 'Qatar', code: 'QA', dhlZone: 'Zone 4', aramexZone: 'Zone 4' },
     { name: 'Oman', code: 'OM', dhlZone: 'Zone 4', aramexZone: 'Zone 4' },
@@ -403,15 +403,15 @@
     }
   }
 
-  // Sequential Compound Calculation Engine (Matching Image Math)
+  // Exact Excel Calculation Engine
   function processCarrierCalculation(rulesCsv, ratesCsv, carrierName, userZoneRaw, chargeableWt, isAramex = false) {
     if(!userZoneRaw || userZoneRaw.trim() === '' || !ratesCsv || ratesCsv.trim().length < 10) return null;
 
-    let fsPct = 25;
-    let profitPct = 15;
+    let fsPct = 29.75;
+    let profitPct = 1;
     let gstPct = 18;
-    let esPct = 0;
-    let essPerKg = 0;
+    let esPct = 20;
+    let essPerKg = 131.1;
 
     if (rulesCsv) {
       rulesCsv.split(/\r?\n/).forEach(line => {
@@ -477,27 +477,24 @@
     let totalCarrierCost = 0;
 
     if (isAramex) {
-      // Exact Aramex Math from Spreadsheet Image:
-      // 1. ESS = Weight * ESS_PER_KG
-      // 2. Base_Plus_ESS = Base + ESS
-      // 3. ES = Base_Plus_ESS * (ES_PCT / 100)
-      // 4. Subtotal_after_ES = Base_Plus_ESS + ES
-      // 5. FS = Subtotal_after_ES * (FS_PCT / 100)
-      // 6. Total = Subtotal_after_ES + FS
+      // Aramex Exact Excel Formula Logic:
+      // ESS = Weight * essPerKg
+      // ES = (Base + ESS) * (esPct / 100)
+      // FS = (Base + ESS + ES) * (fsPct / 100)
+      // Total Carrier Cost = Base + ESS + ES + FS
       
       const essValue = chargeableWt * essPerKg;
-      const basePlusESS = baseFreight + essValue;
-      const esValue = basePlusESS * (esPct / 100);
-      const subtotalAfterES = basePlusESS + esValue;
-      const fsValue = subtotalAfterES * (fsPct / 100);
+      const esValue = (baseFreight + essValue) * (esPct / 100);
+      const fsValue = (baseFreight + essValue + esValue) * (fsPct / 100);
       
-      totalCarrierCost = subtotalAfterES + fsValue;
+      totalCarrierCost = baseFreight + essValue + esValue + fsValue;
     } else {
-      // DHL Standard Additive Math
+      // DHL Additive Math
       const fsCost = baseFreight * (fsPct / 100);
       totalCarrierCost = baseFreight + fsCost;
     }
 
+    // Profit & GST Add-on
     const sellingSubtotal = totalCarrierCost * (1 + (profitPct / 100));
     const gstAmount = (sellingSubtotal * gstPct) / 100;
     const grandTotal = sellingSubtotal + gstAmount;
