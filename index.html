@@ -320,8 +320,8 @@
       globalCountryDHLMap[c.name.toLowerCase()] = c.dhlZone;
       globalCountryDHLMap[c.code.toLowerCase()] = c.dhlZone;
 
-      globalCountryAramexMap[c.name.toLowerCase()] = c.aramexZone || c.dhlZone;
-      globalCountryAramexMap[c.code.toLowerCase()] = c.aramexZone || c.dhlZone;
+      globalCountryAramexMap[c.name.toLowerCase()] = c.aramexZone || '';
+      globalCountryAramexMap[c.code.toLowerCase()] = c.aramexZone || '';
     });
 
     const input = document.getElementById('countryInput');
@@ -394,7 +394,7 @@
             name: parts[1], 
             code: parts[0], 
             dhlZone: parts[2],
-            aramexZone: parts[3] ? parts[3] : parts[2] // Col D for Aramex Zone
+            aramexZone: (parts[3] !== undefined && parts[3] !== '') ? parts[3] : '' // Read Column D strictly
           });
         }
       });
@@ -406,7 +406,7 @@
   }
 
   function processCarrierCalculation(rulesCsv, ratesCsv, carrierName, userZoneRaw, chargeableWt) {
-    if(!ratesCsv || ratesCsv.trim().length < 10) return null;
+    if(!userZoneRaw || userZoneRaw.trim() === '' || !ratesCsv || ratesCsv.trim().length < 10) return null;
 
     let fsPct = 25;
     let profitPct = 15;
@@ -527,10 +527,9 @@
     const chargeableWt = Math.max(grossWt, volWt);
 
     const dhlZoneRaw = globalCountryDHLMap[toCountry.toLowerCase()] || 'Zone 10';
-    const aramexZoneRaw = globalCountryAramexMap[toCountry.toLowerCase()] || dhlZoneRaw;
+    const aramexZoneRaw = globalCountryAramexMap[toCountry.toLowerCase()];
 
     try {
-      // Fetch Rules and Rates for DHL 1, DHL 2, and Aramex
       const [dhlRulesCsv, dhl1Csv, dhl2Csv, aramexRulesCsv, aramexCsv] = await Promise.all([
         fetchTabCSV(GIDS.DHL_RULES),
         fetchTabCSV(GIDS.DHL1_RATES),
@@ -541,7 +540,9 @@
 
       const dhl1Rate = processCarrierCalculation(dhlRulesCsv, dhl1Csv, 'DHL Express (Account 1)', dhlZoneRaw, chargeableWt);
       const dhl2Rate = processCarrierCalculation(dhlRulesCsv, dhl2Csv, 'DHL Express (Account 2)', dhlZoneRaw, chargeableWt);
-      const aramexRate = processCarrierCalculation(aramexRulesCsv, aramexCsv, 'Aramex Express', aramexZoneRaw, chargeableWt);
+      
+      // Calculate Aramex only if Aramex Zone exists for the selected country
+      const aramexRate = aramexZoneRaw ? processCarrierCalculation(aramexRulesCsv, aramexCsv, 'Aramex Express', aramexZoneRaw, chargeableWt) : null;
 
       let results = [];
       if (dhl1Rate) results.push(dhl1Rate);
