@@ -249,7 +249,7 @@
         <i class="fa-brands fa-whatsapp" style="font-size: 18px;"></i> Chat on WhatsApp (+91 77238 37272)
       </a>
       <a href="mailto:courierbirdshipping@gmail.com?subject=International%20Shipping%20Inquiry" class="btn-contact btn-email">
-        <i class="fa-regular fa-envelope" style="font-size: 14px;"></i> Email Support
+        <i class="fa-regular fa-envelope" style="font-size: 16px;"></i> Email Support
       </a>
     </div>
   </div>
@@ -403,7 +403,8 @@
     }
   }
 
-  function processCarrierCalculation(rulesCsv, ratesCsv, carrierName, userZoneRaw, chargeableWt) {
+  // Sequential Compound Calculation Engine (Matching Image Math)
+  function processCarrierCalculation(rulesCsv, ratesCsv, carrierName, userZoneRaw, chargeableWt, isAramex = false) {
     if(!userZoneRaw || userZoneRaw.trim() === '' || !ratesCsv || ratesCsv.trim().length < 10) return null;
 
     let fsPct = 25;
@@ -473,12 +474,30 @@
 
     if (baseFreight === 0) return null;
 
-    // Calculations
-    const esCost = baseFreight * (esPct / 100);
-    const fsCost = baseFreight * (fsPct / 100);
-    const essCost = chargeableWt * essPerKg;
+    let totalCarrierCost = 0;
 
-    const totalCarrierCost = baseFreight + esCost + fsCost + essCost;
+    if (isAramex) {
+      // Exact Aramex Math from Spreadsheet Image:
+      // 1. ESS = Weight * ESS_PER_KG
+      // 2. Base_Plus_ESS = Base + ESS
+      // 3. ES = Base_Plus_ESS * (ES_PCT / 100)
+      // 4. Subtotal_after_ES = Base_Plus_ESS + ES
+      // 5. FS = Subtotal_after_ES * (FS_PCT / 100)
+      // 6. Total = Subtotal_after_ES + FS
+      
+      const essValue = chargeableWt * essPerKg;
+      const basePlusESS = baseFreight + essValue;
+      const esValue = basePlusESS * (esPct / 100);
+      const subtotalAfterES = basePlusESS + esValue;
+      const fsValue = subtotalAfterES * (fsPct / 100);
+      
+      totalCarrierCost = subtotalAfterES + fsValue;
+    } else {
+      // DHL Standard Additive Math
+      const fsCost = baseFreight * (fsPct / 100);
+      totalCarrierCost = baseFreight + fsCost;
+    }
+
     const sellingSubtotal = totalCarrierCost * (1 + (profitPct / 100));
     const gstAmount = (sellingSubtotal * gstPct) / 100;
     const grandTotal = sellingSubtotal + gstAmount;
@@ -536,9 +555,9 @@
         fetchTabCSV(GIDS.ARAMEX_RATES)
       ]);
 
-      const dhl1Rate = processCarrierCalculation(dhlRulesCsv, dhl1Csv, 'DHL Express (Account 1)', dhlZoneRaw, chargeableWt);
-      const dhl2Rate = processCarrierCalculation(dhlRulesCsv, dhl2Csv, 'DHL Express (Account 2)', dhlZoneRaw, chargeableWt);
-      const aramexRate = aramexZoneRaw ? processCarrierCalculation(aramexRulesCsv, aramexCsv, 'Aramex Express', aramexZoneRaw, chargeableWt) : null;
+      const dhl1Rate = processCarrierCalculation(dhlRulesCsv, dhl1Csv, 'DHL Express (Account 1)', dhlZoneRaw, chargeableWt, false);
+      const dhl2Rate = processCarrierCalculation(dhlRulesCsv, dhl2Csv, 'DHL Express (Account 2)', dhlZoneRaw, chargeableWt, false);
+      const aramexRate = aramexZoneRaw ? processCarrierCalculation(aramexRulesCsv, aramexCsv, 'Aramex Express', aramexZoneRaw, chargeableWt, true) : null;
 
       let results = [];
       if (dhl1Rate) results.push(dhl1Rate);
