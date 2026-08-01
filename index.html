@@ -491,31 +491,37 @@
     }
 
     let baseFreight = 0;
+    let exactMatchFound = false;
 
     for (let i = 1; i < lines.length; i++) {
       const parts = parseCSVLine(lines[i]);
       if (!parts[0]) continue;
 
       const wt = parseFloat(parts[0]);
-      const rateVal = parseFloat(parts[zoneColIndex]);
+      const rawCellVal = parts[zoneColIndex] ? parts[zoneColIndex].trim() : '';
+      const rateVal = parseFloat(rawCellVal);
       const type = parts[parts.length - 1] ? parts[parts.length - 1].toUpperCase() : 'FLAT';
 
-      if (!isNaN(wt) && !isNaN(rateVal) && rateVal > 0) {
+      // Strictly check if cell is not empty/blank and rate is valid number > 0
+      if (!isNaN(wt) && rawCellVal !== '' && !isNaN(rateVal) && rateVal > 0) {
         if (type.includes('PER_KG') || parts[0].includes('.1')) {
           if (chargeableWt >= wt) {
             baseFreight = chargeableWt * rateVal;
+            exactMatchFound = true;
           }
         } else {
+          // Flat rate slab check
           if (Math.abs(wt - chargeableWt) < 0.001 || chargeableWt <= wt) {
             baseFreight = rateVal;
+            exactMatchFound = true;
             break;
           }
         }
       }
     }
 
-    // Auto-hide if base freight is missing or 0 for this weight slab
-    if (baseFreight === 0) return null;
+    // STRICT FIX: If cell is blank or no matching slab with valid rate is found, hide service
+    if (!exactMatchFound || baseFreight === 0) return null;
 
     let totalCarrierCost = 0;
 
@@ -525,18 +531,15 @@
       const fsValue = (baseFreight + essValue + esValue) * (rules.fsPct / 100);
       totalCarrierCost = baseFreight + essValue + esValue + fsValue;
     } else if (mode === 'shipglobal') {
-      // Dynamic USA & Under 5kg Rule Engine
       let effectivePerKgGda = rules.perKgGda;
       if (chargeableWt <= 5.0 && rules.perKgGdaLE5 !== null && rules.perKgGdaLE5 > 0) {
         effectivePerKgGda = rules.perKgGdaLE5;
       }
 
-      // ShipGlobal GDA Math: Max of Min GDA Fee OR Per KG Rate
       const gdaFee = Math.max(rules.minGda, chargeableWt * effectivePerKgGda);
       const fsCost = baseFreight * (rules.fsPct / 100);
       totalCarrierCost = baseFreight + gdaFee + fsCost;
     } else {
-      // Standard DHL Math
       const fsCost = baseFreight * (rules.fsPct / 100);
       totalCarrierCost = baseFreight + fsCost;
     }
@@ -621,7 +624,6 @@
       const aramex1Rate = (aramexZoneRaw && aramexZoneRaw.trim() !== '') ? processCarrierCalculation(aramexRules1Csv, aramexCsv, 'Aramex Express (Account 1)', aramexZoneRaw, chargeableWt, 'aramex') : null;
       const aramex2Rate = (aramexZoneRaw && aramexZoneRaw.trim() !== '') ? processCarrierCalculation(aramexRules2Csv, aramexCsv, 'Aramex Express (Account 2)', aramexZoneRaw, chargeableWt, 'aramex') : null;
 
-      // All 4 ShipGlobal Services strictly calculated dynamically
       const sgDirect = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgDirectRulesCsv, sgDirectCsv, 'ShipGlobal Direct', shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
       const sgPremium = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgPremiumRulesCsv, sgPremiumCsv, 'ShipGlobal Premium', shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
       const sgFirstClass = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgFirstClassRulesCsv, sgFirstClassCsv, 'ShipGlobal First Class', shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
