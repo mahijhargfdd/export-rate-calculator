@@ -493,35 +493,47 @@
     let baseFreight = 0;
     let exactMatchFound = false;
 
+    // FIND MATCHING WEIGHT ROW STRICTLY
     for (let i = 1; i < lines.length; i++) {
       const parts = parseCSVLine(lines[i]);
       if (!parts[0]) continue;
 
       const wt = parseFloat(parts[0]);
       const rawCellVal = parts[zoneColIndex] ? parts[zoneColIndex].trim() : '';
-      const rateVal = parseFloat(rawCellVal);
       const type = parts[parts.length - 1] ? parts[parts.length - 1].toUpperCase() : 'FLAT';
 
-      // Strictly check if cell is not empty/blank and rate is valid number > 0
-      if (!isNaN(wt) && rawCellVal !== '' && !isNaN(rateVal) && rateVal > 0) {
-        if (type.includes('PER_KG') || parts[0].includes('.1')) {
-          if (chargeableWt >= wt) {
-            baseFreight = chargeableWt * rateVal;
-            exactMatchFound = true;
-          }
+      let isWeightMatch = false;
+      if (type.includes('PER_KG') || parts[0].includes('.1')) {
+        if (chargeableWt >= wt) isWeightMatch = true;
+      } else {
+        if (Math.abs(wt - chargeableWt) < 0.001 || chargeableWt <= wt) {
+          isWeightMatch = true;
+        }
+      }
+
+      if (isWeightMatch) {
+        // STRICT CHECK: If cell is blank/empty, it means NO RATE AVAILABLE FOR THIS WEIGHT!
+        if (rawCellVal === '' || rawCellVal === null || rawCellVal === undefined) {
+          baseFreight = 0;
+          exactMatchFound = false;
+          if (!type.includes('PER_KG')) break;
         } else {
-          // Flat rate slab check
-          if (Math.abs(wt - chargeableWt) < 0.001 || chargeableWt <= wt) {
-            baseFreight = rateVal;
+          const rateVal = parseFloat(rawCellVal);
+          if (!isNaN(rateVal) && rateVal > 0) {
+            if (type.includes('PER_KG') || parts[0].includes('.1')) {
+              baseFreight = chargeableWt * rateVal;
+            } else {
+              baseFreight = rateVal;
+            }
             exactMatchFound = true;
-            break;
+            if (!type.includes('PER_KG')) break;
           }
         }
       }
     }
 
-    // STRICT FIX: If cell is blank or no matching slab with valid rate is found, hide service
-    if (!exactMatchFound || baseFreight === 0) return null;
+    // STRICT HIDE: If cell is blank or no rate matched
+    if (!exactMatchFound || baseFreight <= 0) return null;
 
     let totalCarrierCost = 0;
 
