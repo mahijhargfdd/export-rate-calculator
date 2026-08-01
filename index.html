@@ -240,6 +240,7 @@
       <span class="partner-badge" style="color:#d40511;"><i class="fa-solid fa-plane"></i> DHL Express</span>
       <span class="partner-badge" style="color:#e50012;"><i class="fa-solid fa-box"></i> Aramex Express</span>
       <span class="partner-badge" style="color:#0284c7;"><i class="fa-solid fa-globe"></i> ShipGlobal</span>
+      <span class="partner-badge" style="color:#ea580c;"><i class="fa-solid fa-truck-fast"></i> QuickShip DHL</span>
     </div>
   </div>
 
@@ -285,7 +286,11 @@
 
     // ShipGlobal Express
     SHIPGLOBAL_EXPRESS_RATES: 753031239,
-    SHIPGLOBAL_EXPRESS_RULES: 20003784
+    SHIPGLOBAL_EXPRESS_RULES: 20003784,
+
+    // QuickShip DHL
+    QUICKSHIP_DHL_RATES: 423899922,
+    QUICKSHIP_DHL_RULES: 50680972
   };
 
   let globalCountryDHLMap = {};
@@ -419,7 +424,7 @@
     }
   }
 
-  // ACCURATE ZONE EXTRACTOR
+  // ACCURATE ZONE EXTRACTOR (SUPPORTING BOTH HORIZONTAL & VERTICAL RULES)
   function extractRulesForZone(rulesCsv, userZoneRaw) {
     let rules = { fsPct: 0, profitPct: 0, gstPct: 18, esPct: 0, essPerKg: 0, minGda: 0, perKgGda: 0, perKgGdaLE5: null };
     if (!rulesCsv) return rules;
@@ -440,16 +445,21 @@
       }
     }
 
-    if (zoneColIndex === -1) {
-      zoneColIndex = headerParts.length - 1; 
-    }
-
     lines.forEach((line, idx) => {
       if (idx === 0) return;
       const p = parseCSVLine(line);
       const code = (p[0] || '').trim().toUpperCase();
 
-      let valStr = (p[zoneColIndex] !== undefined && p[zoneColIndex] !== '') ? p[zoneColIndex].trim() : '';
+      // Check Column D (Vertical Value format) OR Zone Column (Horizontal format)
+      let valStr = '';
+      if (zoneColIndex !== -1 && p[zoneColIndex] !== undefined && p[zoneColIndex] !== '') {
+        valStr = p[zoneColIndex].trim();
+      } else if (p[3] !== undefined && p[3] !== '') {
+        valStr = p[3].trim();
+      } else if (p[1] !== undefined) {
+        valStr = p[1].trim();
+      }
+
       const val = parseFloat(valStr.replace('%', ''));
 
       if (!isNaN(val)) {
@@ -481,14 +491,14 @@
     for (let col = 0; col < headerParts.length; col++) {
       const hClean = headerParts[col].toLowerCase().replace(/[^a-z0-9]/g, '');
       const userClean = userZoneRaw.toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (hClean === userClean || hClean === `zone${targetZoneNum}`) {
+      if (hClean === userClean || hClean === `zone${targetZoneNum}` || hClean === targetZoneNum.toString()) {
         zoneColIndex = col;
         break;
       }
     }
 
     if (zoneColIndex === -1) {
-      zoneColIndex = 2; // Default Zone 29 col index
+      zoneColIndex = targetZoneNum; // Fallback mapping
     }
 
     let baseFreight = 0;
@@ -502,7 +512,6 @@
       const wt = parseFloat(parts[0]);
       const rawCellVal = parts[zoneColIndex] ? parts[zoneColIndex].trim() : '';
       
-      // Look for Rate_Type in last column or D-column
       let rateType = 'FLAT';
       if (parts[3] && (parts[3].toUpperCase() === 'FLAT' || parts[3].toUpperCase() === 'PER_KG')) {
         rateType = parts[3].toUpperCase();
@@ -558,6 +567,7 @@
       const fsCost = baseFreight * (rules.fsPct / 100);
       totalCarrierCost = baseFreight + gdaFee + fsCost;
     } else {
+      // Standard DHL & QuickShip DHL Math
       const fsCost = baseFreight * (rules.fsPct / 100);
       totalCarrierCost = baseFreight + fsCost;
     }
@@ -618,7 +628,8 @@
         sgDirectRulesCsv, sgDirectCsv,
         sgPremiumRulesCsv, sgPremiumCsv,
         sgFirstClassRulesCsv, sgFirstClassCsv,
-        sgExpressRulesCsv, sgExpressCsv
+        sgExpressRulesCsv, sgExpressCsv,
+        quickshipRulesCsv, quickshipRatesCsv
       ] = await Promise.all([
         fetchTabCSV(GIDS.DHL_RULES),
         fetchTabCSV(GIDS.DHL1_RATES),
@@ -633,7 +644,9 @@
         fetchTabCSV(GIDS.SHIPGLOBAL_FIRSTCLASS_RULES),
         fetchTabCSV(GIDS.SHIPGLOBAL_FIRSTCLASS_RATES),
         fetchTabCSV(GIDS.SHIPGLOBAL_EXPRESS_RULES),
-        fetchTabCSV(GIDS.SHIPGLOBAL_EXPRESS_RATES)
+        fetchTabCSV(GIDS.SHIPGLOBAL_EXPRESS_RATES),
+        fetchTabCSV(GIDS.QUICKSHIP_DHL_RULES),
+        fetchTabCSV(GIDS.QUICKSHIP_DHL_RATES)
       ]);
 
       const dhl1Rate = processCarrierCalculation(dhlRulesCsv, dhl1Csv, 'DHL Express (Account 1)', dhlZoneRaw, chargeableWt, 'standard');
@@ -647,6 +660,8 @@
       const sgFirstClass = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgFirstClassRulesCsv, sgFirstClassCsv, 'ShipGlobal First Class', shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
       const sgExpress = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgExpressRulesCsv, sgExpressCsv, 'ShipGlobal Express', shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
 
+      const quickshipRate = processCarrierCalculation(quickshipRulesCsv, quickshipRatesCsv, 'QuickShip DHL', dhlZoneRaw, chargeableWt, 'standard');
+
       let results = [];
       if (dhl1Rate) results.push(dhl1Rate);
       if (dhl2Rate) results.push(dhl2Rate);
@@ -656,6 +671,7 @@
       if (sgPremium) results.push(sgPremium);
       if (sgFirstClass) results.push(sgFirstClass);
       if (sgExpress) results.push(sgExpress);
+      if (quickshipRate) results.push(quickshipRate);
 
       results.sort((a, b) => a.grandTotal - b.grandTotal);
 
