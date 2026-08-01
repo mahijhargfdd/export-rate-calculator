@@ -419,6 +419,7 @@
     }
   }
 
+  // ACCURATE ZONE EXTRACTOR
   function extractRulesForZone(rulesCsv, userZoneRaw) {
     let rules = { fsPct: 0, profitPct: 0, gstPct: 18, esPct: 0, essPerKg: 0, minGda: 0, perKgGda: 0, perKgGdaLE5: null };
     if (!rulesCsv) return rules;
@@ -432,14 +433,15 @@
     let zoneColIndex = -1;
     for (let col = 0; col < headerParts.length; col++) {
       const hClean = headerParts[col].toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (hClean === `zone${targetZoneNum}` || hClean === userZoneRaw.toLowerCase().replace(/[^a-z0-9]/g, '')) {
+      const userClean = userZoneRaw.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (hClean === userClean || hClean === `zone${targetZoneNum}`) {
         zoneColIndex = col;
         break;
       }
     }
 
     if (zoneColIndex === -1) {
-      zoneColIndex = 3 + targetZoneNum;
+      zoneColIndex = headerParts.length - 1; 
     }
 
     lines.forEach((line, idx) => {
@@ -447,9 +449,7 @@
       const p = parseCSVLine(line);
       const code = (p[0] || '').trim().toUpperCase();
 
-      let valStr = (p[zoneColIndex] !== undefined && p[zoneColIndex] !== '') ? p[zoneColIndex].trim() : 
-                     ((p[3] !== undefined && p[3] !== '') ? p[3].trim() : (p[1] !== undefined ? p[1].trim() : ''));
-      
+      let valStr = (p[zoneColIndex] !== undefined && p[zoneColIndex] !== '') ? p[zoneColIndex].trim() : '';
       const val = parseFloat(valStr.replace('%', ''));
 
       if (!isNaN(val)) {
@@ -480,30 +480,38 @@
 
     for (let col = 0; col < headerParts.length; col++) {
       const hClean = headerParts[col].toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (hClean === `zone${targetZoneNum}` || hClean === userZoneRaw.toLowerCase().replace(/[^a-z0-9]/g, '')) {
+      const userClean = userZoneRaw.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (hClean === userClean || hClean === `zone${targetZoneNum}`) {
         zoneColIndex = col;
         break;
       }
     }
 
     if (zoneColIndex === -1) {
-      zoneColIndex = targetZoneNum;
+      zoneColIndex = 2; // Default Zone 29 col index
     }
 
     let baseFreight = 0;
     let exactMatchFound = false;
 
-    // FIND MATCHING WEIGHT ROW STRICTLY
+    // MATCH WEIGHT SLAB & RATE TYPE
     for (let i = 1; i < lines.length; i++) {
       const parts = parseCSVLine(lines[i]);
       if (!parts[0]) continue;
 
       const wt = parseFloat(parts[0]);
       const rawCellVal = parts[zoneColIndex] ? parts[zoneColIndex].trim() : '';
-      const type = parts[parts.length - 1] ? parts[parts.length - 1].toUpperCase() : 'FLAT';
+      
+      // Look for Rate_Type in last column or D-column
+      let rateType = 'FLAT';
+      if (parts[3] && (parts[3].toUpperCase() === 'FLAT' || parts[3].toUpperCase() === 'PER_KG')) {
+        rateType = parts[3].toUpperCase();
+      } else if (parts[parts.length - 1]) {
+        rateType = parts[parts.length - 1].toUpperCase();
+      }
 
       let isWeightMatch = false;
-      if (type.includes('PER_KG') || parts[0].includes('.1')) {
+      if (rateType.includes('PER_KG')) {
         if (chargeableWt >= wt) isWeightMatch = true;
       } else {
         if (Math.abs(wt - chargeableWt) < 0.001 || chargeableWt <= wt) {
@@ -512,27 +520,25 @@
       }
 
       if (isWeightMatch) {
-        // STRICT CHECK: If cell is blank/empty, it means NO RATE AVAILABLE FOR THIS WEIGHT!
         if (rawCellVal === '' || rawCellVal === null || rawCellVal === undefined) {
           baseFreight = 0;
           exactMatchFound = false;
-          if (!type.includes('PER_KG')) break;
+          if (!rateType.includes('PER_KG')) break;
         } else {
           const rateVal = parseFloat(rawCellVal);
           if (!isNaN(rateVal) && rateVal > 0) {
-            if (type.includes('PER_KG') || parts[0].includes('.1')) {
+            if (rateType.includes('PER_KG')) {
               baseFreight = chargeableWt * rateVal;
             } else {
-              baseFreight = rateVal;
+              baseFreight = rateVal; // FLAT RATE
             }
             exactMatchFound = true;
-            if (!type.includes('PER_KG')) break;
+            if (!rateType.includes('PER_KG')) break;
           }
         }
       }
     }
 
-    // STRICT HIDE: If cell is blank or no rate matched
     if (!exactMatchFound || baseFreight <= 0) return null;
 
     let totalCarrierCost = 0;
