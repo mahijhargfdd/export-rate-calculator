@@ -241,6 +241,7 @@
       <span class="partner-badge" style="color:#e50012;"><i class="fa-solid fa-box"></i> Aramex Express</span>
       <span class="partner-badge" style="color:#0284c7;"><i class="fa-solid fa-globe"></i> ShipGlobal</span>
       <span class="partner-badge" style="color:#ea580c;"><i class="fa-solid fa-truck-fast"></i> QuickShip DHL</span>
+      <span class="partner-badge" style="color:#4d148c;"><i class="fa-solid fa-plane-arrival"></i> QuickShip FedEx</span>
     </div>
   </div>
 
@@ -290,24 +291,29 @@
 
     // QuickShip DHL
     QUICKSHIP_DHL_RATES: 423899922,
-    QUICKSHIP_DHL_RULES: 50680972
+    QUICKSHIP_DHL_RULES: 50680972,
+
+    // QuickShip FedEx
+    QUICKSHIP_FEDEX_RATES: 660459112,
+    QUICKSHIP_FEDEX_RULES: 1471373824
   };
 
   let globalCountryDHLMap = {};
   let globalCountryAramexMap = {};
   let globalCountryShipGlobalMap = {};
   let globalCountryQuickshipMap = {};
+  let globalCountryQuickshipFedexMap = {};
   let allCountriesList = [];
 
   const defaultCountries = [
-    { name: 'United Arab Emirates', code: 'AE', dhlZone: 'Zone 1', aramexZone: 'Zone 1', shipglobalZone: 'Zone 25', quickshipZone: 'Zone 1' },
-    { name: 'Saudi Arabia', code: 'SA', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: '', quickshipZone: 'Zone 4' },
-    { name: 'United States', code: 'US', dhlZone: 'Zone 8', aramexZone: 'Zone 8', shipglobalZone: 'Zone 29', quickshipZone: 'Zone 12' },
-    { name: 'Canada', code: 'CA', dhlZone: 'Zone 8', aramexZone: 'Zone 8', shipglobalZone: 'Zone 1', quickshipZone: 'Zone 12' },
-    { name: 'United Kingdom', code: 'GB', dhlZone: 'Zone 7', aramexZone: 'Zone 7', shipglobalZone: 'Zone 27', quickshipZone: 'Zone 7' },
-    { name: 'Australia', code: 'AU', dhlZone: 'Zone 6', aramexZone: 'Zone 7', shipglobalZone: 'Zone 6', quickshipZone: 'Zone 14' },
-    { name: 'Germany', code: 'DE', dhlZone: 'Zone 7', aramexZone: 'Zone 7', shipglobalZone: 'Zone 10', quickshipZone: 'Zone 7' },
-    { name: 'Singapore', code: 'SG', dhlZone: 'Zone 2', aramexZone: 'Zone 5', shipglobalZone: 'Zone 26', quickshipZone: 'Zone 2' }
+    { name: 'United Arab Emirates', code: 'AE', dhlZone: 'Zone 1', aramexZone: 'Zone 1', shipglobalZone: 'Zone 25', quickshipZone: 'Zone 1', quickshipFedexZone: 'Zone 1' },
+    { name: 'Saudi Arabia', code: 'SA', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: '', quickshipZone: 'Zone 4', quickshipFedexZone: 'Zone 4' },
+    { name: 'United States', code: 'US', dhlZone: 'Zone 8', aramexZone: 'Zone 8', shipglobalZone: 'Zone 29', quickshipZone: 'Zone 12', quickshipFedexZone: 'Zone 10' },
+    { name: 'Canada', code: 'CA', dhlZone: 'Zone 8', aramexZone: 'Zone 8', shipglobalZone: 'Zone 1', quickshipZone: 'Zone 12', quickshipFedexZone: 'Zone 10' },
+    { name: 'United Kingdom', code: 'GB', dhlZone: 'Zone 7', aramexZone: 'Zone 7', shipglobalZone: 'Zone 27', quickshipZone: 'Zone 7', quickshipFedexZone: 'Zone 7' },
+    { name: 'Australia', code: 'AU', dhlZone: 'Zone 6', aramexZone: 'Zone 7', shipglobalZone: 'Zone 6', quickshipZone: 'Zone 14', quickshipFedexZone: 'Zone 6' },
+    { name: 'Germany', code: 'DE', dhlZone: 'Zone 7', aramexZone: 'Zone 7', shipglobalZone: 'Zone 10', quickshipZone: 'Zone 7', quickshipFedexZone: 'Zone 7' },
+    { name: 'Singapore', code: 'SG', dhlZone: 'Zone 2', aramexZone: 'Zone 5', shipglobalZone: 'Zone 26', quickshipZone: 'Zone 2', quickshipFedexZone: 'Zone 2' }
   ];
 
   function parseCSVLine(line) {
@@ -343,6 +349,9 @@
 
       globalCountryQuickshipMap[c.name.toLowerCase()] = c.quickshipZone || c.dhlZone;
       globalCountryQuickshipMap[c.code.toLowerCase()] = c.quickshipZone || c.dhlZone;
+
+      globalCountryQuickshipFedexMap[c.name.toLowerCase()] = c.quickshipFedexZone || c.quickshipZone || c.dhlZone;
+      globalCountryQuickshipFedexMap[c.code.toLowerCase()] = c.quickshipFedexZone || c.quickshipZone || c.dhlZone;
     });
 
     const input = document.getElementById('countryInput');
@@ -418,7 +427,8 @@
             dhlZone: parts[2],
             aramexZone: (parts[3] !== undefined && parts[3] !== '') ? parts[3] : '',
             shipglobalZone: (parts[4] !== undefined && parts[4] !== '') ? parts[4] : '',
-            quickshipZone: (parts[5] !== undefined && parts[5] !== '') ? parts[5] : parts[2]
+            quickshipZone: (parts[5] !== undefined && parts[5] !== '') ? parts[5] : parts[2],
+            quickshipFedexZone: (parts[6] !== undefined && parts[6] !== '') ? parts[6] : ((parts[5] !== undefined && parts[5] !== '') ? parts[5] : parts[2])
           });
         }
       });
@@ -429,7 +439,6 @@
     }
   }
 
-  // ACCURATE ZONE EXTRACTOR (SUPPORTING BOTH HORIZONTAL & VERTICAL RULES)
   function extractRulesForZone(rulesCsv, userZoneRaw) {
     let rules = { fsPct: 0, profitPct: 0, gstPct: 18, esPct: 0, essPerKg: 0, minGda: 0, perKgGda: 0, perKgGdaLE5: null };
     if (!rulesCsv) return rules;
@@ -502,13 +511,12 @@
     }
 
     if (zoneColIndex === -1) {
-      zoneColIndex = targetZoneNum; // Fallback mapping
+      zoneColIndex = targetZoneNum; 
     }
 
     let baseFreight = 0;
     let exactMatchFound = false;
 
-    // MATCH WEIGHT SLAB & RATE TYPE
     for (let i = 1; i < lines.length; i++) {
       const parts = parseCSVLine(lines[i]);
       if (!parts[0]) continue;
@@ -543,7 +551,7 @@
             if (rateType.includes('PER_KG')) {
               baseFreight = chargeableWt * rateVal;
             } else {
-              baseFreight = rateVal; // FLAT RATE
+              baseFreight = rateVal; 
             }
             exactMatchFound = true;
             if (!rateType.includes('PER_KG')) break;
@@ -571,7 +579,6 @@
       const fsCost = baseFreight * (rules.fsPct / 100);
       totalCarrierCost = baseFreight + gdaFee + fsCost;
     } else {
-      // Standard DHL & QuickShip DHL Math
       const fsCost = baseFreight * (rules.fsPct / 100);
       totalCarrierCost = baseFreight + fsCost;
     }
@@ -625,6 +632,7 @@
     const aramexZoneRaw = globalCountryAramexMap[toCountry.toLowerCase()];
     const shipglobalZoneRaw = globalCountryShipGlobalMap[toCountry.toLowerCase()];
     const quickshipZoneRaw = globalCountryQuickshipMap[toCountry.toLowerCase()] || dhlZoneRaw;
+    const quickshipFedexZoneRaw = globalCountryQuickshipFedexMap[toCountry.toLowerCase()] || quickshipZoneRaw;
 
     try {
       const [
@@ -634,7 +642,8 @@
         sgPremiumRulesCsv, sgPremiumCsv,
         sgFirstClassRulesCsv, sgFirstClassCsv,
         sgExpressRulesCsv, sgExpressCsv,
-        quickshipRulesCsv, quickshipRatesCsv
+        quickshipRulesCsv, quickshipRatesCsv,
+        quickshipFedexRulesCsv, quickshipFedexRatesCsv
       ] = await Promise.all([
         fetchTabCSV(GIDS.DHL_RULES),
         fetchTabCSV(GIDS.DHL1_RATES),
@@ -651,7 +660,9 @@
         fetchTabCSV(GIDS.SHIPGLOBAL_EXPRESS_RULES),
         fetchTabCSV(GIDS.SHIPGLOBAL_EXPRESS_RATES),
         fetchTabCSV(GIDS.QUICKSHIP_DHL_RULES),
-        fetchTabCSV(GIDS.QUICKSHIP_DHL_RATES)
+        fetchTabCSV(GIDS.QUICKSHIP_DHL_RATES),
+        fetchTabCSV(GIDS.QUICKSHIP_FEDEX_RULES),
+        fetchTabCSV(GIDS.QUICKSHIP_FEDEX_RATES)
       ]);
 
       const dhl1Rate = processCarrierCalculation(dhlRulesCsv, dhl1Csv, 'DHL Express (Account 1)', dhlZoneRaw, chargeableWt, 'standard');
@@ -666,6 +677,8 @@
       const sgExpress = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgExpressRulesCsv, sgExpressCsv, 'ShipGlobal Express', shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
 
       const quickshipRate = (quickshipZoneRaw && quickshipZoneRaw.trim() !== '') ? processCarrierCalculation(quickshipRulesCsv, quickshipRatesCsv, 'QuickShip DHL', quickshipZoneRaw, chargeableWt, 'standard') : null;
+      
+      const quickshipFedexRate = (quickshipFedexZoneRaw && quickshipFedexZoneRaw.trim() !== '') ? processCarrierCalculation(quickshipFedexRulesCsv, quickshipFedexRatesCsv, 'QuickShip FedEx', quickshipFedexZoneRaw, chargeableWt, 'standard') : null;
 
       let results = [];
       if (dhl1Rate) results.push(dhl1Rate);
@@ -677,6 +690,7 @@
       if (sgFirstClass) results.push(sgFirstClass);
       if (sgExpress) results.push(sgExpress);
       if (quickshipRate) results.push(quickshipRate);
+      if (quickshipFedexRate) results.push(quickshipFedexRate);
 
       results.sort((a, b) => a.grandTotal - b.grandTotal);
 
