@@ -74,7 +74,6 @@
   };
 
   let countryMapData = [];
-  let fetchedServiceData = {};
 
   // Fetch Google Sheet CSV Data
   async function fetchCSV(gid) {
@@ -107,7 +106,6 @@
       const countrySelect = document.getElementById('countrySelect');
       countrySelect.innerHTML = '<option value="">-- Select Destination --</option>';
       
-      // Collect Unique Countries from Column A
       const countries = new Set();
       for (let i = 1; i < countryMapData.length; i++) {
         if (countryMapData[i][0]) countries.add(countryMapData[i][0].trim());
@@ -140,8 +138,6 @@
     document.getElementById('resultsCard').classList.remove('d-none');
 
     const calculatedResults = [];
-
-    // Process ShipGlobal Services
     const sgServices = ['ShipGlobal_Direct', 'ShipGlobal_Premium', 'ShipGlobal_FirstClass', 'ShipGlobal_Express'];
 
     for (let serviceKey of sgServices) {
@@ -162,19 +158,16 @@
 
   // Calculation Logic Engine
   function calculateShipGlobalRate(serviceKey, country, weight, rates, addons) {
-    // 1. Get Zone from Country Mapping Sheet
     const countryRow = countryMapData.find(r => r[0] && r[0].trim().toLowerCase() === country.toLowerCase());
     if (!countryRow) return null;
     
-    const zoneName = countryRow[1] ? countryRow[1].trim() : ''; // e.g., "Zone 29"
+    const zoneName = countryRow[1] ? countryRow[1].trim() : ''; 
     if (!zoneName) return null;
 
-    // 2. Find Zone Column Index in Rates & Addons
     const rateHeaders = rates[0].map(h => h ? h.trim() : '');
     const zoneColIdx = rateHeaders.indexOf(zoneName);
     if (zoneColIdx === -1) return null;
 
-    // 3. Match Weight Slab (Decimal & Fractional Handling)
     let baseRate = null;
     for (let i = 1; i < rates.length; i++) {
       const slabWeight = parseFloat(rates[i][0]);
@@ -187,10 +180,8 @@
       }
     }
 
-    // AUTO-HIDE: If rate is missing/empty, return null
     if (baseRate === null) return null;
 
-    // 4. Extract Rules from Addons Sheet
     const addonHeaders = addons[0].map(h => h ? h.trim() : '');
     const addonZoneColIdx = addonHeaders.indexOf(zoneName);
 
@@ -208,13 +199,11 @@
       if (code === 'PROFIT') profitPercent = isNaN(val) ? 0 : val;
     }
 
-    // Dynamic Rule Switch for Under 5kg (e.g., USA)
     let effectivePerKgGda = perKgGda;
     if (weight <= 5.0 && perKgGdaLE5 !== null && perKgGdaLE5 > 0) {
       effectivePerKgGda = perKgGdaLE5;
     }
 
-    // 5. Compute Charges
     const gdaCharge = Math.max(minGda, weight * effectivePerKgGda);
     const fuelSurcharge = (baseRate * fsPercent) / 100;
     const subtotal = baseRate + gdaCharge + fuelSurcharge;
@@ -222,8 +211,6 @@
     const profitAmount = (subtotal * profitPercent) / 100;
 
     const totalCost = subtotal + gstAmount + profitAmount;
-
-    // Format Display Title
     const formattedName = serviceKey.replace('_', ' ');
 
     return {
@@ -246,7 +233,6 @@
       return;
     }
 
-    // Sort by cheapest total cost
     results.sort((a, b) => a.rawTotal - b.rawTotal);
 
     results.forEach((res, index) => {
