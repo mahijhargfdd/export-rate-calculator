@@ -270,8 +270,22 @@
     ARAMEX_RATES: 1867409658,
     ARAMEX_RULES_1: 425772554,
     ARAMEX_RULES_2: 1093725141,
-    SHIPGLOBAL_RATES: 436153582,
-    SHIPGLOBAL_RULES: 2079126276
+    
+    // ShipGlobal Direct
+    SHIPGLOBAL_DIRECT_RATES: 436153582,
+    SHIPGLOBAL_DIRECT_RULES: 2079126276,
+
+    // ShipGlobal Premium
+    SHIPGLOBAL_PREMIUM_RATES: 138538271,
+    SHIPGLOBAL_PREMIUM_RULES: 691225953,
+
+    // ShipGlobal First Class
+    SHIPGLOBAL_FIRSTCLASS_RATES: 292821845,
+    SHIPGLOBAL_FIRSTCLASS_RULES: 388094128,
+
+    // ShipGlobal Express
+    SHIPGLOBAL_EXPRESS_RATES: 753031239,
+    SHIPGLOBAL_EXPRESS_RULES: 20003784
   };
 
   let globalCountryDHLMap = {};
@@ -282,20 +296,12 @@
   const defaultCountries = [
     { name: 'United Arab Emirates', code: 'AE', dhlZone: 'Zone 1', aramexZone: 'Zone 1', shipglobalZone: 'Zone 25' },
     { name: 'Saudi Arabia', code: 'SA', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: '' },
-    { name: 'United States', code: 'US', dhlZone: 'Zone 8', aramexZone: 'Zone 8', shipglobalZone: 'Zone 1' },
+    { name: 'United States', code: 'US', dhlZone: 'Zone 8', aramexZone: 'Zone 8', shipglobalZone: 'Zone 29' },
     { name: 'Canada', code: 'CA', dhlZone: 'Zone 8', aramexZone: 'Zone 8', shipglobalZone: 'Zone 1' },
-    { name: 'United Kingdom', code: 'GB', dhlZone: 'Zone 7', aramexZone: 'Zone 7', shipglobalZone: 'Zone 7' },
+    { name: 'United Kingdom', code: 'GB', dhlZone: 'Zone 7', aramexZone: 'Zone 7', shipglobalZone: 'Zone 27' },
     { name: 'Australia', code: 'AU', dhlZone: 'Zone 6', aramexZone: 'Zone 7', shipglobalZone: 'Zone 6' },
     { name: 'Germany', code: 'DE', dhlZone: 'Zone 7', aramexZone: 'Zone 7', shipglobalZone: 'Zone 10' },
-    { name: 'Singapore', code: 'SG', dhlZone: 'Zone 2', aramexZone: 'Zone 5', shipglobalZone: 'Zone 26' },
-    { name: 'Malaysia', code: 'MY', dhlZone: 'Zone 2', aramexZone: 'Zone 2', shipglobalZone: '' },
-    { name: 'Qatar', code: 'QA', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: '' },
-    { name: 'Oman', code: 'OM', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: '' },
-    { name: 'Kuwait', code: 'KW', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: '' },
-    { name: 'Bahrain', code: 'BH', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: '' },
-    { name: 'China', code: 'CN', dhlZone: 'Zone 3', aramexZone: 'Zone 3', shipglobalZone: '' },
-    { name: 'Japan', code: 'JP', dhlZone: 'Zone 5', aramexZone: 'Zone 5', shipglobalZone: '' },
-    { name: 'France', code: 'FR', dhlZone: 'Zone 7', aramexZone: 'Zone 7', shipglobalZone: 'Zone 11' }
+    { name: 'Singapore', code: 'SG', dhlZone: 'Zone 2', aramexZone: 'Zone 5', shipglobalZone: 'Zone 26' }
   ];
 
   function parseCSVLine(line) {
@@ -414,7 +420,7 @@
   }
 
   function extractRulesForZone(rulesCsv, userZoneRaw) {
-    let rules = { fsPct: 0, profitPct: 0, gstPct: 18, esPct: 0, essPerKg: 0, minGda: 0, perKgGda: 0 };
+    let rules = { fsPct: 0, profitPct: 0, gstPct: 18, esPct: 0, essPerKg: 0, minGda: 0, perKgGda: 0, perKgGdaLE5: null };
     if (!rulesCsv) return rules;
 
     const lines = rulesCsv.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
@@ -454,6 +460,7 @@
         if (code === 'ESS') rules.essPerKg = val;
         if (code === 'MIN_GDA') rules.minGda = val;
         if (code === 'PER_KG_GDA') rules.perKgGda = val;
+        if (code === 'PER_KG_GDA_LE5') rules.perKgGdaLE5 = val;
       }
     });
 
@@ -499,7 +506,7 @@
             baseFreight = chargeableWt * rateVal;
           }
         } else {
-          if (chargeableWt <= wt) {
+          if (Math.abs(wt - chargeableWt) < 0.001 || chargeableWt <= wt) {
             baseFreight = rateVal;
             break;
           }
@@ -518,8 +525,14 @@
       const fsValue = (baseFreight + essValue + esValue) * (rules.fsPct / 100);
       totalCarrierCost = baseFreight + essValue + esValue + fsValue;
     } else if (mode === 'shipglobal') {
+      // Dynamic USA & Under 5kg Rule Engine
+      let effectivePerKgGda = rules.perKgGda;
+      if (chargeableWt <= 5.0 && rules.perKgGdaLE5 !== null && rules.perKgGdaLE5 > 0) {
+        effectivePerKgGda = rules.perKgGdaLE5;
+      }
+
       // ShipGlobal GDA Math: Max of Min GDA Fee OR Per KG Rate
-      const gdaFee = Math.max(rules.minGda, chargeableWt * rules.perKgGda);
+      const gdaFee = Math.max(rules.minGda, chargeableWt * effectivePerKgGda);
       const fsCost = baseFreight * (rules.fsPct / 100);
       totalCarrierCost = baseFreight + gdaFee + fsCost;
     } else {
@@ -581,7 +594,10 @@
       const [
         dhlRulesCsv, dhl1Csv, dhl2Csv, 
         aramexRules1Csv, aramexRules2Csv, aramexCsv,
-        sgRulesCsv, sgCsv
+        sgDirectRulesCsv, sgDirectCsv,
+        sgPremiumRulesCsv, sgPremiumCsv,
+        sgFirstClassRulesCsv, sgFirstClassCsv,
+        sgExpressRulesCsv, sgExpressCsv
       ] = await Promise.all([
         fetchTabCSV(GIDS.DHL_RULES),
         fetchTabCSV(GIDS.DHL1_RATES),
@@ -589,8 +605,14 @@
         fetchTabCSV(GIDS.ARAMEX_RULES_1),
         fetchTabCSV(GIDS.ARAMEX_RULES_2),
         fetchTabCSV(GIDS.ARAMEX_RATES),
-        fetchTabCSV(GIDS.SHIPGLOBAL_RULES),
-        fetchTabCSV(GIDS.SHIPGLOBAL_RATES)
+        fetchTabCSV(GIDS.SHIPGLOBAL_DIRECT_RULES),
+        fetchTabCSV(GIDS.SHIPGLOBAL_DIRECT_RATES),
+        fetchTabCSV(GIDS.SHIPGLOBAL_PREMIUM_RULES),
+        fetchTabCSV(GIDS.SHIPGLOBAL_PREMIUM_RATES),
+        fetchTabCSV(GIDS.SHIPGLOBAL_FIRSTCLASS_RULES),
+        fetchTabCSV(GIDS.SHIPGLOBAL_FIRSTCLASS_RATES),
+        fetchTabCSV(GIDS.SHIPGLOBAL_EXPRESS_RULES),
+        fetchTabCSV(GIDS.SHIPGLOBAL_EXPRESS_RATES)
       ]);
 
       const dhl1Rate = processCarrierCalculation(dhlRulesCsv, dhl1Csv, 'DHL Express (Account 1)', dhlZoneRaw, chargeableWt, 'standard');
@@ -599,15 +621,21 @@
       const aramex1Rate = (aramexZoneRaw && aramexZoneRaw.trim() !== '') ? processCarrierCalculation(aramexRules1Csv, aramexCsv, 'Aramex Express (Account 1)', aramexZoneRaw, chargeableWt, 'aramex') : null;
       const aramex2Rate = (aramexZoneRaw && aramexZoneRaw.trim() !== '') ? processCarrierCalculation(aramexRules2Csv, aramexCsv, 'Aramex Express (Account 2)', aramexZoneRaw, chargeableWt, 'aramex') : null;
 
-      // ShipGlobal is STRICTLY calculated ONLY if shipglobalZoneRaw is NOT empty/blank!
-      const shipglobalRate = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgRulesCsv, sgCsv, 'ShipGlobal Direct', shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
+      // All 4 ShipGlobal Services strictly calculated dynamically
+      const sgDirect = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgDirectRulesCsv, sgDirectCsv, 'ShipGlobal Direct', shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
+      const sgPremium = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgPremiumRulesCsv, sgPremiumCsv, 'ShipGlobal Premium', shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
+      const sgFirstClass = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgFirstClassRulesCsv, sgFirstClassCsv, 'ShipGlobal First Class', shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
+      const sgExpress = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgExpressRulesCsv, sgExpressCsv, 'ShipGlobal Express', shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
 
       let results = [];
       if (dhl1Rate) results.push(dhl1Rate);
       if (dhl2Rate) results.push(dhl2Rate);
       if (aramex1Rate) results.push(aramex1Rate);
       if (aramex2Rate) results.push(aramex2Rate);
-      if (shipglobalRate) results.push(shipglobalRate);
+      if (sgDirect) results.push(sgDirect);
+      if (sgPremium) results.push(sgPremium);
+      if (sgFirstClass) results.push(sgFirstClass);
+      if (sgExpress) results.push(sgExpress);
 
       results.sort((a, b) => a.grandTotal - b.grandTotal);
 
