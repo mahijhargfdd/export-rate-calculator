@@ -3,257 +3,649 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Global Freight Rate Calculator</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <title>CourierBird - Enterprise Global Shipping Rate Calculator</title>
+  <!-- Google Fonts & FontAwesome Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
   <style>
-    body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    .card { border-radius: 12px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-    .table-custom { background: #fff; border-radius: 10px; overflow: hidden; }
-    .table-custom th { background-color: #0d6efd; color: white; border: none; }
-    .cheapest-row { background-color: #d1e7dd !important; font-weight: bold; }
-    .badge-cheapest { background-color: #198754; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; }
+    * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+    
+    body { 
+      background: radial-gradient(circle at 50% 0%, #1e3a8a 0%, #0f172a 100%);
+      min-height: 100vh;
+      padding: 40px 20px; 
+      margin: 0; 
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .calc-card { 
+      width: 100%;
+      max-width: 950px; 
+      margin: 0 auto;
+      background: #ffffff; 
+      padding: 40px; 
+      border-radius: 20px; 
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4); 
+    }
+    
+    .brand-header { text-align: center; margin-bottom: 22px; }
+    .brand-logo-img { max-width: 260px; height: auto; display: block; margin: 0 auto 8px auto; }
+    .brand-subtitle { color: #64748b; font-size: 14px; font-weight: 600; }
+
+    .trust-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      background: #f8fafc;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      margin-bottom: 30px;
+    }
+    .trust-item {
+      font-size: 12px;
+      font-weight: 700;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .trust-item i { color: #f97316; font-size: 14px; }
+    
+    @media(max-width: 650px){ 
+      .trust-bar { grid-template-columns: 1fr 1fr; gap: 8px; } 
+      .calc-card { padding: 25px 20px; }
+    }
+    
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    @media(max-width: 600px){ .grid { grid-template-columns: 1fr; } }
+    
+    .form-group { margin-bottom: 18px; position: relative; }
+    label { 
+      display: block; 
+      font-weight: 700; 
+      font-size: 12px; 
+      color: #334155; 
+      margin-bottom: 8px; 
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    input, select { 
+      width: 100%; 
+      padding: 13px 16px; 
+      border: 1.5px solid #cbd5e1; 
+      border-radius: 10px; 
+      font-size: 14px; 
+      font-weight: 600;
+      color: #0f172a;
+      outline: none;
+      background: #ffffff;
+      transition: all 0.2s;
+    }
+
+    input:focus, select:focus {
+      border-color: #f97316;
+      box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.12);
+    }
+
+    .autocomplete-items {
+      position: absolute;
+      border: 1px solid #cbd5e1;
+      border-top: none;
+      z-index: 99;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background-color: #ffffff;
+      max-height: 220px;
+      overflow-y: auto;
+      border-radius: 0 0 10px 10px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      display: none;
+    }
+    .autocomplete-items div {
+      padding: 12px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      color: #0f172a;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .autocomplete-items div:hover {
+      background-color: #f97316;
+      color: #ffffff;
+    }
+    
+    button { 
+      width: 100%; 
+      background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); 
+      color: white; 
+      border: none; 
+      padding: 16px; 
+      border-radius: 10px; 
+      font-size: 16px; 
+      font-weight: 800; 
+      cursor: pointer; 
+      margin-top: 10px; 
+      box-shadow: 0 10px 20px -5px rgba(249, 115, 22, 0.4);
+      transition: all 0.2s;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px -5px rgba(249, 115, 22, 0.5);
+    }
+    
+    .result-box { margin-top: 30px; padding: 22px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; }
+    .vol-info { font-size: 13px; color: #1e3a8a; margin-bottom: 18px; font-weight: 700; background: #eff6ff; padding: 12px 16px; border-radius: 8px; border-left: 4px solid #f97316; }
+    
+    .rate-table { width: 100%; border-collapse: collapse; margin-top: 10px; overflow: hidden; border-radius: 8px; }
+    .rate-table th, .rate-table td { padding: 14px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+    .rate-table th { background: #0f172a; color: #ffffff; font-weight: 700; font-size: 13px; text-transform: uppercase; }
+    .price-text { font-size: 16px; font-weight: 800; color: #ea580c; }
+    .cheapest-tag { background: #f97316; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-left: 6px; }
+    .loader { display: none; text-align: center; color: #0f172a; font-weight: 700; margin-top: 20px; }
+
+    .partner-section { margin-top: 30px; text-align: center; }
+    .partner-title { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 12px; }
+    .partner-badges { display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .partner-badge { background: #ffffff; border: 1px solid #e2e8f0; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 800; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+
+    .contact-section { margin-top: 25px; padding-top: 25px; border-top: 1px solid #e2e8f0; text-align: center; }
+    .contact-title { font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 16px; }
+    .btn-container { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+    .btn-contact { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 700; font-size: 14px; transition: all 0.2s; }
+    .btn-whatsapp { background: #25D366; color: white; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.25); }
+    .btn-email { background: #0f172a; color: white; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25); }
+    .btn-contact:hover { transform: translateY(-2px); opacity: 0.95; }
   </style>
 </head>
 <body>
 
-<div class="container py-4">
-  <h2 class="text-center mb-4 fw-bold text-primary">Multi-Carrier Shipping Rate Calculator</h2>
+<div class="calc-card">
   
-  <!-- Form Card -->
-  <div class="card p-4 mb-4">
-    <div class="row g-3">
-      <div class="col-md-4">
-        <label class="form-label fw-semibold">Select Country</label>
-        <select id="countrySelect" class="form-select">
-          <option value="">-- Loading Countries --</option>
-        </select>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label fw-semibold">Chargeable Weight (KG)</label>
-        <input type="number" id="weightInput" class="form-control" placeholder="e.g. 0.25, 1.5, 7" step="0.01" min="0.01">
-      </div>
-      <div class="col-md-4 d-flex align-items-end">
-        <button id="calcBtn" class="btn btn-primary w-100 fw-bold py-2">Calculate Live Rates</button>
-      </div>
+  <div class="brand-header">
+    <img src="https://i.ibb.co/ZzSD1DDc/image.png" alt="CourierBird Logo" class="brand-logo-img">
+    <div class="brand-subtitle">Worldwide Express Live Rate Calculator</div>
+  </div>
+
+  <div class="trust-bar">
+    <div class="trust-item"><i class="fa-solid fa-truck-ramp-box"></i> Doorstep Pickup</div>
+    <div class="trust-item"><i class="fa-solid fa-rotate"></i> Live Sync Rates</div>
+    <div class="trust-item"><i class="fa-solid fa-shield-halved"></i> Safe & Insured</div>
+    <div class="trust-item"><i class="fa-solid fa-plane-departure"></i> Express Clearance</div>
+  </div>
+
+  <div class="grid">
+    <div class="form-group">
+      <label>Ship From (Origin)</label>
+      <select id="fromCountry">
+        <option value="India">India (IN)</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label>Destination Country</label>
+      <input type="text" id="countryInput" placeholder="Type country name or code (e.g. Saudi, SA, USA)..." autocomplete="off">
+      <input type="hidden" id="selectedCountryValue">
+      <div id="autocompleteList" class="autocomplete-items"></div>
     </div>
   </div>
 
-  <!-- Results Section -->
-  <div id="resultsCard" class="card p-4 d-none">
-    <h4 class="mb-3 text-secondary">Available Carrier Rates</h4>
-    <div class="table-responsive">
-      <table class="table table-hover align-middle table-custom">
-        <thead>
-          <tr>
-            <th>Carrier / Service</th>
-            <th>Base Freight</th>
-            <th>Addons & Charges</th>
-            <th>GST / Tax</th>
-            <th>Total Cost</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="ratesTableBody">
-          <!-- Live Calculated Rows Will Be Inserted Here -->
-        </tbody>
-      </table>
+  <div class="grid">
+    <div class="form-group">
+      <label>No. of Cartons / Boxes</label>
+      <input type="number" id="cartons" value="1" min="1">
+    </div>
+    <div class="form-group">
+      <label>Gross Weight (KG)</label>
+      <input type="number" id="grossWeight" value="2" step="0.5">
     </div>
   </div>
+
+  <label>Single Box Dimensions (CM)</label>
+  <div class="grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 10px;">
+    <input type="number" id="length" placeholder="Length" value="10">
+    <input type="number" id="width" placeholder="Width" value="10">
+    <input type="number" id="height" placeholder="Height" value="10">
+  </div>
+
+  <button onclick="calculateGlobalLiveRates()"><i class="fa-solid fa-calculator" style="margin-right: 8px;"></i> Compare All Live Rates</button>
+  <div class="loader" id="loader"><i class="fa-solid fa-spinner fa-spin"></i> Fetching live zone rates & calculating costs...</div>
+
+  <div class="result-box" id="resultBox" style="display:none;">
+    <div class="vol-info" id="weightSummary"></div>
+    
+    <table class="rate-table">
+      <thead>
+        <tr>
+          <th>Carrier / Partner Account</th>
+          <th>Route & Zone</th>
+          <th>Subtotal</th>
+          <th>GST</th>
+          <th>Final Total</th>
+        </tr>
+      </thead>
+      <tbody id="comparisonRows"></tbody>
+    </table>
+  </div>
+
+  <div class="partner-section">
+    <div class="partner-title">Official Logistics Network Partners</div>
+    <div class="partner-badges">
+      <span class="partner-badge" style="color:#d40511;"><i class="fa-solid fa-plane"></i> DHL Express</span>
+      <span class="partner-badge" style="color:#e50012;"><i class="fa-solid fa-box"></i> Aramex Express</span>
+      <span class="partner-badge" style="color:#0284c7;"><i class="fa-solid fa-globe"></i> ShipGlobal</span>
+    </div>
+  </div>
+
+  <div class="contact-section">
+    <div class="contact-title">Have Questions or Want to Book a Shipment?</div>
+    <div class="btn-container">
+      <a href="https://wa.me/917723837272?text=Hi%20CourierBird,%20I%20want%20to%20book%20a%20shipment%20/%20have%20a%20query." target="_blank" class="btn-contact btn-whatsapp">
+        <i class="fa-brands fa-whatsapp" style="font-size: 18px;"></i> Chat on WhatsApp (+91 77238 37272)
+      </a>
+      <a href="mailto:courierbirdshipping@gmail.com?subject=International%20Shipping%20Inquiry" class="btn-contact btn-email">
+        <i class="fa-regular fa-envelope" style="font-size: 16px;"></i> Email Support
+      </a>
+    </div>
+  </div>
+
 </div>
 
 <script>
-  // Spreadsheet Config
-  const SHEET_ID = '1VUF4UxBlyCUIlezfCIDRTD6jEKxObWDtWHf5VRv-Mso';
-  
-  const CONFIG = {
-    Country_Map_GID: '0', 
-    ShipGlobal_Direct: { rateGID: '436153582', addonGID: '2079126276' },
-    ShipGlobal_Premium: { rateGID: '138538271', addonGID: '691225953' },
-    ShipGlobal_FirstClass: { rateGID: '292821845', addonGID: '388094128' },
-    ShipGlobal_Express: { rateGID: '753031239', addonGID: '20003784' }
+  // Central Sheet Base URL
+  const SHEET_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_pJojVwByrOQOyTKqUfThUMgXFOVEFGF5rZSGN20Yxi0E_Wxor3yqVjbIbv2bAimhrf4VQ7Za9AHh/pub?single=true&output=csv';
+
+  // Exact GIDs mapped to Google Sheets
+  const GIDS = {
+    COUNTRY_ZONES: 0,
+    DHL1_RATES: 197215827,
+    DHL2_RATES: 1518997283,
+    DHL_RULES: 1402919501,
+    ARAMEX_RATES: 1867409658,
+    ARAMEX_RULES_1: 425772554,
+    ARAMEX_RULES_2: 1093725141,
+    SHIPGLOBAL_RATES: 436153582,
+    SHIPGLOBAL_RULES: 2079126276
   };
 
-  let countryMapData = [];
+  let globalCountryDHLMap = {};
+  let globalCountryAramexMap = {};
+  let globalCountryShipGlobalMap = {};
+  let allCountriesList = [];
 
-  // Fetch Google Sheet CSV Data
-  async function fetchCSV(gid) {
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`;
-    const response = await fetch(url);
-    const text = await response.text();
-    return parseCSV(text);
+  const defaultCountries = [
+    { name: 'United Arab Emirates', code: 'AE', dhlZone: 'Zone 1', aramexZone: 'Zone 1', shipglobalZone: 'Zone 25' },
+    { name: 'Saudi Arabia', code: 'SA', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: '' },
+    { name: 'United States', code: 'US', dhlZone: 'Zone 8', aramexZone: 'Zone 8', shipglobalZone: 'Zone 1' },
+    { name: 'Canada', code: 'CA', dhlZone: 'Zone 8', aramexZone: 'Zone 8', shipglobalZone: 'Zone 1' },
+    { name: 'United Kingdom', code: 'GB', dhlZone: 'Zone 7', aramexZone: 'Zone 7', shipglobalZone: 'Zone 7' },
+    { name: 'Australia', code: 'AU', dhlZone: 'Zone 6', aramexZone: 'Zone 7', shipglobalZone: 'Zone 6' },
+    { name: 'Germany', code: 'DE', dhlZone: 'Zone 7', aramexZone: 'Zone 7', shipglobalZone: 'Zone 10' },
+    { name: 'Singapore', code: 'SG', dhlZone: 'Zone 2', aramexZone: 'Zone 5', shipglobalZone: 'Zone 26' },
+    { name: 'Malaysia', code: 'MY', dhlZone: 'Zone 2', aramexZone: 'Zone 2', shipglobalZone: '' },
+    { name: 'Qatar', code: 'QA', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: '' },
+    { name: 'Oman', code: 'OM', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: '' },
+    { name: 'Kuwait', code: 'KW', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: '' },
+    { name: 'Bahrain', code: 'BH', dhlZone: 'Zone 4', aramexZone: 'Zone 4', shipglobalZone: '' },
+    { name: 'China', code: 'CN', dhlZone: 'Zone 3', aramexZone: 'Zone 3', shipglobalZone: '' },
+    { name: 'Japan', code: 'JP', dhlZone: 'Zone 5', aramexZone: 'Zone 5', shipglobalZone: '' },
+    { name: 'France', code: 'FR', dhlZone: 'Zone 7', aramexZone: 'Zone 7', shipglobalZone: 'Zone 11' }
+  ];
+
+  function parseCSVLine(line) {
+    const values = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        values.push(current.replace(/^"|"$/g, '').trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    values.push(current.replace(/^"|"$/g, '').trim());
+    return values;
   }
 
-  function parseCSV(text) {
-    const lines = text.split('\n').filter(line => line.trim() !== '');
-    return lines.map(line => {
-      const re = /(?!\s*$)\s*(?:'([^'\\]*(?:\\[\s\S][^'\\]*)*)'|"([^"\\]*(?:\\[\s\S][^"\\]*)*)"|([^,'"\s\\]*(?:\s+[^,'"\s\\]+)*))\s*(?:,|$)/g;
-      const arr = [];
-      line.replace(re, (m0, m1, m2, m3) => {
-        if (m1 !== undefined) arr.push(m1.replace(/\\'/g, "'"));
-        else if (m2 !== undefined) arr.push(m2.replace(/\\"/g, '"'));
-        else if (m3 !== undefined) arr.push(m3);
-        else arr.push('');
-        return '';
+  function setupAutocomplete(list) {
+    allCountriesList = list;
+    list.forEach(c => {
+      globalCountryDHLMap[c.name.toLowerCase()] = c.dhlZone;
+      globalCountryDHLMap[c.code.toLowerCase()] = c.dhlZone;
+
+      globalCountryAramexMap[c.name.toLowerCase()] = c.aramexZone || '';
+      globalCountryAramexMap[c.code.toLowerCase()] = c.aramexZone || '';
+
+      globalCountryShipGlobalMap[c.name.toLowerCase()] = c.shipglobalZone || '';
+      globalCountryShipGlobalMap[c.code.toLowerCase()] = c.shipglobalZone || '';
+    });
+
+    const input = document.getElementById('countryInput');
+    const listContainer = document.getElementById('autocompleteList');
+
+    function filterAndShow(val) {
+      listContainer.innerHTML = '';
+      const query = (val || '').toLowerCase().trim();
+
+      const matches = allCountriesList.filter(item => 
+        item.name.toLowerCase().includes(query) || 
+        item.code.toLowerCase().includes(query)
+      );
+
+      if (matches.length === 0) {
+        listContainer.style.display = 'none';
+        return;
+      }
+
+      matches.forEach(item => {
+        const div = document.createElement('div');
+        div.innerHTML = `<strong>${item.name}</strong> (${item.code})`;
+        div.addEventListener('click', function() {
+          input.value = `${item.name} (${item.code})`;
+          document.getElementById('selectedCountryValue').value = item.name;
+          listContainer.style.display = 'none';
+        });
+        listContainer.appendChild(div);
       });
-      return arr;
+
+      listContainer.style.display = 'block';
+    }
+
+    input.addEventListener('input', function() { filterAndShow(this.value); });
+    input.addEventListener('focus', function() { filterAndShow(this.value); });
+
+    document.addEventListener('click', function(e) {
+      if (e.target !== input && e.target !== listContainer) {
+        listContainer.style.display = 'none';
+      }
     });
   }
 
-  // Initial Load - Country Dropdown Setup
-  window.addEventListener('DOMContentLoaded', async () => {
+  async function fetchTabCSV(sheetGid) {
+    if(sheetGid === undefined || sheetGid === null) return "";
     try {
-      countryMapData = await fetchCSV(CONFIG.Country_Map_GID);
-      const countrySelect = document.getElementById('countrySelect');
-      countrySelect.innerHTML = '<option value="">-- Select Destination --</option>';
-      
-      const countries = new Set();
-      for (let i = 1; i < countryMapData.length; i++) {
-        if (countryMapData[i][0]) countries.add(countryMapData[i][0].trim());
+      const res = await fetch(`${SHEET_BASE}&gid=${sheetGid}&_cb=${Date.now()}`);
+      if (res.ok) {
+        const text = await res.text();
+        if (text && text.trim().length > 10) return text;
       }
+    } catch (e) {}
+    return "";
+  }
+
+  async function initCountries() {
+    setupAutocomplete(defaultCountries);
+
+    try {
+      const csvText = await fetchTabCSV(GIDS.COUNTRY_ZONES);
+      if(!csvText) return;
       
-      Array.from(countries).sort().forEach(country => {
-        const opt = document.createElement('option');
-        opt.value = country;
-        opt.textContent = country;
-        countrySelect.appendChild(opt);
-      });
-    } catch (e) {
-      console.error("Error loading initial data:", e);
-      alert("Failed to load country mapping sheet.");
-    }
-  });
+      const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
 
-  // Calculate Rates Event
-  document.getElementById('calcBtn').addEventListener('click', async () => {
-    const country = document.getElementById('countrySelect').value;
-    const weight = parseFloat(document.getElementById('weightInput').value);
-
-    if (!country || isNaN(weight) || weight <= 0) {
-      alert("Please select a valid Country and enter Weight.");
-      return;
-    }
-
-    const tableBody = document.getElementById('ratesTableBody');
-    tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-3">Calculating live rates...</td></tr>';
-    document.getElementById('resultsCard').classList.remove('d-none');
-
-    const calculatedResults = [];
-    const sgServices = ['ShipGlobal_Direct', 'ShipGlobal_Premium', 'ShipGlobal_FirstClass', 'ShipGlobal_Express'];
-
-    for (let serviceKey of sgServices) {
-      const cfg = CONFIG[serviceKey];
-      try {
-        const rates = await fetchCSV(cfg.rateGID);
-        const addons = await fetchCSV(cfg.addonGID);
-        
-        const res = calculateShipGlobalRate(serviceKey, country, weight, rates, addons);
-        if (res) calculatedResults.push(res);
-      } catch (e) {
-        console.warn(`Error processing ${serviceKey}:`, e);
-      }
-    }
-
-    renderResults(calculatedResults);
-  });
-
-  // Calculation Logic Engine
-  function calculateShipGlobalRate(serviceKey, country, weight, rates, addons) {
-    const countryRow = countryMapData.find(r => r[0] && r[0].trim().toLowerCase() === country.toLowerCase());
-    if (!countryRow) return null;
-    
-    const zoneName = countryRow[1] ? countryRow[1].trim() : ''; 
-    if (!zoneName) return null;
-
-    const rateHeaders = rates[0].map(h => h ? h.trim() : '');
-    const zoneColIdx = rateHeaders.indexOf(zoneName);
-    if (zoneColIdx === -1) return null;
-
-    let baseRate = null;
-    for (let i = 1; i < rates.length; i++) {
-      const slabWeight = parseFloat(rates[i][0]);
-      if (!isNaN(slabWeight) && Math.abs(slabWeight - weight) < 0.001) {
-        const val = rates[i][zoneColIdx];
-        if (val && val.trim() !== '' && !isNaN(parseFloat(val))) {
-          baseRate = parseFloat(val);
+      let fetchedList = [];
+      lines.forEach((line, idx) => {
+        if (idx === 0) return;
+        const parts = parseCSVLine(line);
+        if (parts.length >= 3 && parts[1] && parts[2]) {
+          fetchedList.push({ 
+            name: parts[1], 
+            code: parts[0], 
+            dhlZone: parts[2],
+            aramexZone: (parts[3] !== undefined && parts[3] !== '') ? parts[3] : '',
+            shipglobalZone: (parts[4] !== undefined && parts[4] !== '') ? parts[4] : ''
+          });
         }
+      });
+
+      if (fetchedList.length > 0) setupAutocomplete(fetchedList);
+    } catch (e) {
+      console.warn("Using default country list.");
+    }
+  }
+
+  function extractRulesForZone(rulesCsv, userZoneRaw) {
+    let rules = { fsPct: 0, profitPct: 0, gstPct: 18, esPct: 0, essPerKg: 0, minGda: 0, perKgGda: 0 };
+    if (!rulesCsv) return rules;
+
+    const lines = rulesCsv.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length === 0) return rules;
+
+    const headerParts = parseCSVLine(lines[0]);
+    const targetZoneNum = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
+
+    let zoneColIndex = -1;
+    for (let col = 0; col < headerParts.length; col++) {
+      const hClean = headerParts[col].toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (hClean === `zone${targetZoneNum}` || hClean === userZoneRaw.toLowerCase().replace(/[^a-z0-9]/g, '')) {
+        zoneColIndex = col;
         break;
       }
     }
 
-    if (baseRate === null) return null;
-
-    const addonHeaders = addons[0].map(h => h ? h.trim() : '');
-    const addonZoneColIdx = addonHeaders.indexOf(zoneName);
-
-    let minGda = 0, perKgGda = 0, perKgGdaLE5 = null, fsPercent = 0, gstPercent = 18, profitPercent = 0;
-
-    for (let i = 1; i < addons.length; i++) {
-      const code = addons[i][0] ? addons[i][0].trim() : '';
-      const val = parseFloat(addons[i][addonZoneColIdx]);
-
-      if (code === 'MIN_GDA') minGda = isNaN(val) ? 0 : val;
-      if (code === 'PER_KG_GDA') perKgGda = isNaN(val) ? 0 : val;
-      if (code === 'PER_KG_GDA_LE5') perKgGdaLE5 = isNaN(val) ? null : val;
-      if (code === 'FS') fsPercent = isNaN(val) ? 0 : val;
-      if (code === 'GST') gstPercent = isNaN(val) ? 18 : val;
-      if (code === 'PROFIT') profitPercent = isNaN(val) ? 0 : val;
+    if (zoneColIndex === -1) {
+      zoneColIndex = 3 + targetZoneNum;
     }
 
-    let effectivePerKgGda = perKgGda;
-    if (weight <= 5.0 && perKgGdaLE5 !== null && perKgGdaLE5 > 0) {
-      effectivePerKgGda = perKgGdaLE5;
+    lines.forEach((line, idx) => {
+      if (idx === 0) return;
+      const p = parseCSVLine(line);
+      const code = (p[0] || '').trim().toUpperCase();
+
+      let valStr = (p[zoneColIndex] !== undefined && p[zoneColIndex] !== '') ? p[zoneColIndex].trim() : 
+                     ((p[3] !== undefined && p[3] !== '') ? p[3].trim() : (p[1] !== undefined ? p[1].trim() : ''));
+      
+      const val = parseFloat(valStr.replace('%', ''));
+
+      if (!isNaN(val)) {
+        if (code === 'FS') rules.fsPct = val;
+        if (code === 'PROFIT') rules.profitPct = val;
+        if (code === 'GST') rules.gstPct = val;
+        if (code === 'ES') rules.esPct = val;
+        if (code === 'ESS') rules.essPerKg = val;
+        if (code === 'MIN_GDA') rules.minGda = val;
+        if (code === 'PER_KG_GDA') rules.perKgGda = val;
+      }
+    });
+
+    return rules;
+  }
+
+  function processCarrierCalculation(rulesCsv, ratesCsv, carrierName, userZoneRaw, chargeableWt, mode = 'standard') {
+    if(!userZoneRaw || userZoneRaw.trim() === '' || !ratesCsv || ratesCsv.trim().length < 10) return null;
+
+    const rules = extractRulesForZone(rulesCsv, userZoneRaw);
+
+    const lines = ratesCsv.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    const headerParts = parseCSVLine(lines[0]);
+
+    const targetZoneNum = parseInt(userZoneRaw.replace(/[^0-9]/g, '')) || 1;
+    let zoneColIndex = -1;
+
+    for (let col = 0; col < headerParts.length; col++) {
+      const hClean = headerParts[col].toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (hClean === `zone${targetZoneNum}` || hClean === userZoneRaw.toLowerCase().replace(/[^a-z0-9]/g, '')) {
+        zoneColIndex = col;
+        break;
+      }
     }
 
-    const gdaCharge = Math.max(minGda, weight * effectivePerKgGda);
-    const fuelSurcharge = (baseRate * fsPercent) / 100;
-    const subtotal = baseRate + gdaCharge + fuelSurcharge;
-    const gstAmount = (subtotal * gstPercent) / 100;
-    const profitAmount = (subtotal * profitPercent) / 100;
+    if (zoneColIndex === -1) {
+      zoneColIndex = targetZoneNum;
+    }
 
-    const totalCost = subtotal + gstAmount + profitAmount;
-    const formattedName = serviceKey.replace('_', ' ');
+    let baseFreight = 0;
+
+    for (let i = 1; i < lines.length; i++) {
+      const parts = parseCSVLine(lines[i]);
+      if (!parts[0]) continue;
+
+      const wt = parseFloat(parts[0]);
+      const rateVal = parseFloat(parts[zoneColIndex]);
+      const type = parts[parts.length - 1] ? parts[parts.length - 1].toUpperCase() : 'FLAT';
+
+      if (!isNaN(wt) && !isNaN(rateVal) && rateVal > 0) {
+        if (type.includes('PER_KG') || parts[0].includes('.1')) {
+          if (chargeableWt >= wt) {
+            baseFreight = chargeableWt * rateVal;
+          }
+        } else {
+          if (chargeableWt <= wt) {
+            baseFreight = rateVal;
+            break;
+          }
+        }
+      }
+    }
+
+    // Auto-hide if base freight is missing or 0 for this weight slab
+    if (baseFreight === 0) return null;
+
+    let totalCarrierCost = 0;
+
+    if (mode === 'aramex') {
+      const essValue = chargeableWt * rules.essPerKg;
+      const esValue = (baseFreight + essValue) * (rules.esPct / 100);
+      const fsValue = (baseFreight + essValue + esValue) * (rules.fsPct / 100);
+      totalCarrierCost = baseFreight + essValue + esValue + fsValue;
+    } else if (mode === 'shipglobal') {
+      // ShipGlobal GDA Math: Max of Min GDA Fee OR Per KG Rate
+      const gdaFee = Math.max(rules.minGda, chargeableWt * rules.perKgGda);
+      const fsCost = baseFreight * (rules.fsPct / 100);
+      totalCarrierCost = baseFreight + gdaFee + fsCost;
+    } else {
+      // Standard DHL Math
+      const fsCost = baseFreight * (rules.fsPct / 100);
+      totalCarrierCost = baseFreight + fsCost;
+    }
+
+    const sellingSubtotal = totalCarrierCost * (1 + (rules.profitPct / 100));
+    const gstAmount = (sellingSubtotal * rules.gstPct) / 100;
+    const grandTotal = sellingSubtotal + gstAmount;
 
     return {
-      serviceName: formattedName,
-      baseRate: baseRate.toFixed(2),
-      addons: (gdaCharge + fuelSurcharge).toFixed(2),
-      gst: gstAmount.toFixed(2),
-      totalCost: totalCost.toFixed(2),
-      rawTotal: totalCost
+      carrierName,
+      userZoneRaw,
+      subtotal: sellingSubtotal,
+      gstPct: rules.gstPct,
+      gstAmount,
+      grandTotal
     };
   }
 
-  // Display Render Engine
-  function renderResults(results) {
-    const tableBody = document.getElementById('ratesTableBody');
-    tableBody.innerHTML = '';
+  async function calculateGlobalLiveRates() {
+    let toCountry = document.getElementById('selectedCountryValue').value;
+    const inputVal = document.getElementById('countryInput').value.trim();
 
-    if (results.length === 0) {
-      tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-3 text-muted">No valid rates found for the selected weight and country.</td></tr>';
+    if (!toCountry && inputVal) {
+      const matched = allCountriesList.find(c => 
+        c.name.toLowerCase() === inputVal.toLowerCase() || 
+        c.code.toLowerCase() === inputVal.toLowerCase() ||
+        `${c.name} (${c.code})`.toLowerCase() === inputVal.toLowerCase()
+      );
+      if (matched) toCountry = matched.name;
+    }
+
+    if (!toCountry) {
+      alert('Please select a valid Destination Country from suggestions!');
       return;
     }
 
-    results.sort((a, b) => a.rawTotal - b.rawTotal);
+    document.getElementById('loader').style.display = 'block';
+    document.getElementById('resultBox').style.display = 'none';
 
-    results.forEach((res, index) => {
-      const isCheapest = index === 0;
-      const tr = document.createElement('tr');
-      if (isCheapest) tr.classList.add('cheapest-row');
+    const fromCountry = document.getElementById('fromCountry').value;
+    const cartons = parseInt(document.getElementById('cartons').value) || 1;
+    const grossWt = parseFloat(document.getElementById('grossWeight').value) || 0;
+    const l = parseFloat(document.getElementById('length').value) || 0;
+    const w = parseFloat(document.getElementById('width').value) || 0;
+    const h = parseFloat(document.getElementById('height').value) || 0;
 
-      tr.innerHTML = `
-        <td>
-          <strong>${res.serviceName}</strong>
-          ${isCheapest ? '<br><span class="badge-cheapest">Best Price</span>' : ''}
-        </td>
-        <td>₹${res.baseRate}</td>
-        <td>₹${res.addons}</td>
-        <td>₹${res.gst}</td>
-        <td class="fw-bold text-success">₹${res.totalCost}</td>
-        <td><button class="btn btn-sm ${isCheapest ? 'btn-success' : 'btn-outline-primary'}">Select</button></td>
-      `;
-      tableBody.appendChild(tr);
-    });
+    const volWt = ((l * w * h) / 5000) * cartons;
+    const chargeableWt = Math.max(grossWt, volWt);
+
+    const dhlZoneRaw = globalCountryDHLMap[toCountry.toLowerCase()] || 'Zone 10';
+    const aramexZoneRaw = globalCountryAramexMap[toCountry.toLowerCase()];
+    const shipglobalZoneRaw = globalCountryShipGlobalMap[toCountry.toLowerCase()];
+
+    try {
+      const [
+        dhlRulesCsv, dhl1Csv, dhl2Csv, 
+        aramexRules1Csv, aramexRules2Csv, aramexCsv,
+        sgRulesCsv, sgCsv
+      ] = await Promise.all([
+        fetchTabCSV(GIDS.DHL_RULES),
+        fetchTabCSV(GIDS.DHL1_RATES),
+        fetchTabCSV(GIDS.DHL2_RATES),
+        fetchTabCSV(GIDS.ARAMEX_RULES_1),
+        fetchTabCSV(GIDS.ARAMEX_RULES_2),
+        fetchTabCSV(GIDS.ARAMEX_RATES),
+        fetchTabCSV(GIDS.SHIPGLOBAL_RULES),
+        fetchTabCSV(GIDS.SHIPGLOBAL_RATES)
+      ]);
+
+      const dhl1Rate = processCarrierCalculation(dhlRulesCsv, dhl1Csv, 'DHL Express (Account 1)', dhlZoneRaw, chargeableWt, 'standard');
+      const dhl2Rate = processCarrierCalculation(dhlRulesCsv, dhl2Csv, 'DHL Express (Account 2)', dhlZoneRaw, chargeableWt, 'standard');
+      
+      const aramex1Rate = (aramexZoneRaw && aramexZoneRaw.trim() !== '') ? processCarrierCalculation(aramexRules1Csv, aramexCsv, 'Aramex Express (Account 1)', aramexZoneRaw, chargeableWt, 'aramex') : null;
+      const aramex2Rate = (aramexZoneRaw && aramexZoneRaw.trim() !== '') ? processCarrierCalculation(aramexRules2Csv, aramexCsv, 'Aramex Express (Account 2)', aramexZoneRaw, chargeableWt, 'aramex') : null;
+
+      // ShipGlobal is STRICTLY calculated ONLY if shipglobalZoneRaw is NOT empty/blank!
+      const shipglobalRate = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgRulesCsv, sgCsv, 'ShipGlobal Direct', shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
+
+      let results = [];
+      if (dhl1Rate) results.push(dhl1Rate);
+      if (dhl2Rate) results.push(dhl2Rate);
+      if (aramex1Rate) results.push(aramex1Rate);
+      if (aramex2Rate) results.push(aramex2Rate);
+      if (shipglobalRate) results.push(shipglobalRate);
+
+      results.sort((a, b) => a.grandTotal - b.grandTotal);
+
+      document.getElementById('loader').style.display = 'none';
+
+      const fmt = (num) => '₹' + num.toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+
+      let rowsHTML = '';
+      results.forEach((res, index) => {
+        const isBest = index === 0;
+        rowsHTML += `
+          <tr>
+            <td>
+              <strong>${res.carrierName}</strong> 
+              ${isBest ? '<span class="cheapest-tag">Best Price</span>' : ''}
+            </td>
+            <td>${fromCountry} ➔ ${toCountry} (${res.userZoneRaw})</td>
+            <td>${fmt(res.subtotal)}</td>
+            <td style="color: #dc2626; font-weight: 700;">+ ${fmt(res.gstAmount)} (${res.gstPct}%)</td>
+            <td class="price-text">${fmt(res.grandTotal)}</td>
+          </tr>
+        `;
+      });
+
+      document.getElementById('weightSummary').innerText = 
+        `Actual Wt: ${grossWt} KG | Volumetric Wt: ${volWt.toFixed(2)} KG | Chargeable Wt: ${chargeableWt.toFixed(2)} KG`;
+
+      document.getElementById('comparisonRows').innerHTML = rowsHTML;
+      document.getElementById('resultBox').style.display = 'block';
+
+    } catch (e) {
+      console.error("Calculation Error:", e);
+      document.getElementById('loader').style.display = 'none';
+      alert('Error fetching rate calculation. Please check your connection.');
+    }
   }
+
+  window.onload = initCountries;
 </script>
 
 </body>
