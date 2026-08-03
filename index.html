@@ -218,7 +218,7 @@
     <table class="rate-table">
       <thead>
         <tr>
-          <th>Carrier / Partner Account</th>
+          <th>Service Name</th>
           <th>Route & Zone</th>
           <th>Subtotal</th>
           <th>GST</th>
@@ -249,6 +249,7 @@
 
   // Exact GIDs mapped to Google Sheets
   const GIDS = {
+    SERVICE_MAPPING: 533353738,
     COUNTRY_ZONES: 0,
     DHL1_RATES: 197215827,
     DHL2_RATES: 1518997283,
@@ -620,6 +621,7 @@
 
     try {
       const [
+        mappingCsv,
         dhlRulesCsv, dhl1Csv, dhl2Csv, 
         aramexRules1Csv, aramexRules2Csv, aramexCsv,
         sgDirectRulesCsv, sgDirectCsv,
@@ -629,6 +631,7 @@
         quickshipRulesCsv, quickshipRatesCsv,
         quickshipFedexRulesCsv, quickshipFedexRatesCsv
       ] = await Promise.all([
+        fetchTabCSV(GIDS.SERVICE_MAPPING),
         fetchTabCSV(GIDS.DHL_RULES),
         fetchTabCSV(GIDS.DHL1_RATES),
         fetchTabCSV(GIDS.DHL2_RATES),
@@ -649,20 +652,42 @@
         fetchTabCSV(GIDS.QUICKSHIP_FEDEX_RATES)
       ]);
 
-      const dhl1Rate = processCarrierCalculation(dhlRulesCsv, dhl1Csv, 'DHL Express (Account 1)', dhlZoneRaw, chargeableWt, 'standard');
-      const dhl2Rate = processCarrierCalculation(dhlRulesCsv, dhl2Csv, 'DHL Express (Account 2)', dhlZoneRaw, chargeableWt, 'standard');
-      
-      const aramex1Rate = (aramexZoneRaw && aramexZoneRaw.trim() !== '') ? processCarrierCalculation(aramexRules1Csv, aramexCsv, 'Aramex Express (Account 1)', aramexZoneRaw, chargeableWt, 'aramex') : null;
-      const aramex2Rate = (aramexZoneRaw && aramexZoneRaw.trim() !== '') ? processCarrierCalculation(aramexRules2Csv, aramexCsv, 'Aramex Express (Account 2)', aramexZoneRaw, chargeableWt, 'aramex') : null;
+      // Dynamic Service Name Mapping Dictionary with Fallback
+      let serviceNameMap = {};
+      if (mappingCsv && mappingCsv.trim().length > 0) {
+        const lines = mappingCsv.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+        lines.forEach((line, idx) => {
+          if (idx === 0) return;
+          const parts = parseCSVLine(line);
+          const origName = parts[0] ? parts[0].trim() : '';
+          const dispName = parts[1] ? parts[1].trim() : '';
+          if (origName !== '') {
+            serviceNameMap[origName] = dispName;
+          }
+        });
+      }
 
-      const sgDirect = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgDirectRulesCsv, sgDirectCsv, 'ShipGlobal Direct', shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
-      const sgPremium = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgPremiumRulesCsv, sgPremiumCsv, 'ShipGlobal Premium', shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
-      const sgFirstClass = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgFirstClassRulesCsv, sgFirstClassCsv, 'ShipGlobal First Class', shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
-      const sgExpress = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgExpressRulesCsv, sgExpressCsv, 'ShipGlobal Express', shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
+      function getDisplayName(origCarrierName) {
+        if (serviceNameMap[origCarrierName] && serviceNameMap[origCarrierName].length > 0) {
+          return serviceNameMap[origCarrierName];
+        }
+        return origCarrierName; // Fallback to original name if blank or not found
+      }
 
-      const quickshipRate = (quickshipZoneRaw && quickshipZoneRaw.trim() !== '') ? processCarrierCalculation(quickshipRulesCsv, quickshipRatesCsv, 'QuickShip DHL', quickshipZoneRaw, chargeableWt, 'standard') : null;
+      const dhl1Rate = processCarrierCalculation(dhlRulesCsv, dhl1Csv, getDisplayName('DHL Express (Account 1)'), dhlZoneRaw, chargeableWt, 'standard');
+      const dhl2Rate = processCarrierCalculation(dhlRulesCsv, dhl2Csv, getDisplayName('DHL Express (Account 2)'), dhlZoneRaw, chargeableWt, 'standard');
       
-      const quickshipFedexRate = (quickshipFedexZoneRaw && quickshipFedexZoneRaw.trim() !== '') ? processCarrierCalculation(quickshipFedexRulesCsv, quickshipFedexRatesCsv, 'QuickShip FedEx', quickshipFedexZoneRaw, chargeableWt, 'standard') : null;
+      const aramex1Rate = (aramexZoneRaw && aramexZoneRaw.trim() !== '') ? processCarrierCalculation(aramexRules1Csv, aramexCsv, getDisplayName('Aramex Express (Account 1)'), aramexZoneRaw, chargeableWt, 'aramex') : null;
+      const aramex2Rate = (aramexZoneRaw && aramexZoneRaw.trim() !== '') ? processCarrierCalculation(aramexRules2Csv, aramexCsv, getDisplayName('Aramex Express (Account 2)'), aramexZoneRaw, chargeableWt, 'aramex') : null;
+
+      const sgDirect = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgDirectRulesCsv, sgDirectCsv, getDisplayName('ShipGlobal Direct'), shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
+      const sgPremium = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgPremiumRulesCsv, sgPremiumCsv, getDisplayName('ShipGlobal Premium'), shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
+      const sgFirstClass = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgFirstClassRulesCsv, sgFirstClassCsv, getDisplayName('ShipGlobal First Class'), shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
+      const sgExpress = (shipglobalZoneRaw && shipglobalZoneRaw.trim() !== '') ? processCarrierCalculation(sgExpressRulesCsv, sgExpressCsv, getDisplayName('ShipGlobal Express'), shipglobalZoneRaw, chargeableWt, 'shipglobal') : null;
+
+      const quickshipRate = (quickshipZoneRaw && quickshipZoneRaw.trim() !== '') ? processCarrierCalculation(quickshipRulesCsv, quickshipRatesCsv, getDisplayName('QuickShip DHL'), quickshipZoneRaw, chargeableWt, 'standard') : null;
+      
+      const quickshipFedexRate = (quickshipFedexZoneRaw && quickshipFedexZoneRaw.trim() !== '') ? processCarrierCalculation(quickshipFedexRulesCsv, quickshipFedexRatesCsv, getDisplayName('QuickShip FedEx'), quickshipFedexZoneRaw, chargeableWt, 'standard') : null;
 
       let results = [];
       if (dhl1Rate) results.push(dhl1Rate);
